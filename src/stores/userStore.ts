@@ -247,6 +247,8 @@ export const userActions = {
         // Update profile completion percentage
         userStore.profileCompletionPercentage.set(userComputed.profileCompletionPercentage);
       } else {
+        console.log('Creating new user for Clerk user:', userId);
+        
         // Create new user record
         const newUser: NewUser = {
           auth_user_id: userId,
@@ -256,6 +258,7 @@ export const userActions = {
           first_name: clerkUser.firstName || '',
           last_name: clerkUser.lastName || '',
           user_role: 'patient' as UserRole,
+          program_type: 'type1' as ProgramType, // Required for patients due to DB constraint
           diabetes_type: 'type1' as DiabetesType, // Default, will be updated in onboarding
           preferred_units: 'metric',
           glucose_unit: 'mg/dL',
@@ -270,12 +273,25 @@ export const userActions = {
           onboarding_step: OnboardingStep.WELCOME,
         };
         
+        console.log('Creating user with data:', JSON.stringify(newUser, null, 2));
+        
         const createdUser = await userActions.createUser(newUser);
         if (createdUser) {
+          console.log('User created successfully:', createdUser.id);
           userStore.profile.set(createdUser);
           userStore.onboardingStep.set(OnboardingStep.WELCOME);
           userStore.onboardingCompleted.set(false);
           userStore.isOnboardingActive.set(true);
+        } else {
+          console.error('Failed to create user - will continue with limited functionality');
+          // Set a minimal profile for offline mode
+          userStore.profile.set({
+            id: userId,
+            ...newUser,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            last_active_at: new Date().toISOString(),
+          });
         }
       }
       
@@ -295,6 +311,8 @@ export const userActions = {
       userStore.isSyncing.set(true);
       
       if (supabaseClientManager.isAvailable) {
+        console.log('Attempting to create user in Supabase...');
+        
         const { data, error } = await supabaseClientManager.userService
           .from('users')
           .insert(userData)
@@ -302,11 +320,14 @@ export const userActions = {
           .single();
         
         if (error) {
+          console.error('Supabase user creation error:', error);
           throw new Error(`Failed to create user: ${error.message}`);
         }
         
+        console.log('User created in Supabase successfully');
         return data;
       } else {
+        console.log('Supabase not available, creating local user');
         // Offline mode - create local user with generated ID
         const localUser: User = {
           id: crypto.randomUUID(),

@@ -53,30 +53,10 @@ export default function RootChatLayout() {
         options={{ presentation: "modal", headerTitle: "Room Settings" }}
       />
       
-      {/* Camera routes */}
-      <Stack.Screen 
-        name="camera/food-capture" 
-        options={{ 
-          headerTitle: "Scan Food",
-          presentation: "modal" 
-        }} 
-      />
-      <Stack.Screen 
-        name="camera/barcode-scanner" 
-        options={{ 
-          headerTitle: "Scan Barcode",
-          presentation: "modal" 
-        }} 
-      />
-      
-      {/* Analysis routes */}
-      <Stack.Screen 
-        name="analysis/food-results" 
-        options={{ 
-          headerTitle: "Food Analysis",
-          presentation: "modal" 
-        }} 
-      />
+      {/* Nested layouts handle their own routes */}
+      <Stack.Screen name="camera" options={{ headerShown: false }} />
+      <Stack.Screen name="analysis" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
     </Stack>
   );
 }

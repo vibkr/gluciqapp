@@ -1,0 +1,41 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "done": "Terminé"
+  },
+  "food": {
+    "scanning": "Scan de Nourriture",
+    "capture": "Capturer la Nourriture",
+    "analyzing": "Analyse...",
+    "results": "Résultats d'Analyse de Nourriture",
+    "nutrition": "Informations Nutritionnelles",
+    "insulin": "Calcul d'Insuline",
+    "calories": "Calories",
+    "carbs": "Glucides",
+    "protein": "Protéines",
+    "fat": "Lipides",
+    "sugar": "Sucre",
+    "fiber": "Fibres"
+  },
+  "barcode": {
+    "scanning": "Scan du Code-barres",
+    "scan": "Scanner le Code-barres",
+    "product": "Informations du Produit",
+    "notFound": "Produit non trouvé"
+  },
+  "dashboard": {
+    "welcome": "Bienvenue",
+    "scanFood": "Scanner la Nourriture",
+    "scanBarcode": "Scanner le Code-barres",
+    "history": "Historique",
+    "settings": "Paramètres"
+  }
+}

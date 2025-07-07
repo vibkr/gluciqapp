@@ -12,12 +12,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import InsulinCalculationCard from '../../components/food/InsulinCalculationCard';
-import { Button, Card } from '../../components/ui';
-import { useTheme } from '../../contexts/ThemeContext';
-import { FoodAnalysisResult } from '../../lib/ai/EnhancedFoodAnalysisService';
-import { foodService } from '../../lib/services/FoodService';
-import { insulinService } from '../../lib/services/InsulinService';
+import InsulinCalculationCard from '../../../components/food/InsulinCalculationCard';
+import { Button, Card } from '../../../components/ui';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { FoodAnalysisResult } from '../../../lib/ai/EnhancedFoodAnalysisService';
+import { foodService } from '../../../lib/services/FoodService';
+import { insulinService } from '../../../lib/services/InsulinService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -120,7 +120,7 @@ export default function FoodResultsScreen() {
         userId
       );
       
-      if (mealResponse.success) {
+      if (mealResponse.success && mealResponse.data) {
         Alert.alert(
           'Food Saved!', 
           'Your food analysis has been saved to your nutrition log.',
@@ -243,11 +243,11 @@ export default function FoodResultsScreen() {
       const insulinDoseResponse = await insulinService.logInsulinDose({
         user_id: userId,
         dose_type: 'meal',
-        calculated_dose: insulinCalc.total_recommendation.units,
-        user_final_dose: insulinCalc.total_recommendation.units,
-        carbohydrates: analysisResult.foods.reduce((sum, food) => sum + food.nutrition.carbohydrates, 0),
+        calculated_dose: insulinCalc?.total_recommendation?.units || 0,
+        user_final_dose: insulinCalc?.total_recommendation?.units || 0,
+        carbohydrates: analysisResult.foods.reduce((sum, food) => sum + (food.nutrition?.carbohydrates || 0), 0),
         meal_id: mealResponse.data.id,
-        notes: `Calculated from food analysis: ${insulinCalc.total_recommendation.confidence_level}% confidence`
+        notes: `Calculated from food analysis: ${insulinCalc?.total_recommendation?.confidence_level || 'Unknown'}% confidence`
       });
       
       if (insulinDoseResponse.success) {

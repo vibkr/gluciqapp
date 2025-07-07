@@ -13,9 +13,9 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, Card } from '../../components/ui';
-import { useTheme } from '../../contexts/ThemeContext';
-import { enhancedFoodAnalysisService } from '../../lib/ai/EnhancedFoodAnalysisService';
+import { Button, Card } from '../../../components/ui';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { enhancedFoodAnalysisService } from '../../../lib/ai/EnhancedFoodAnalysisService';
 
 // Use the provided test user ID from the database
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';

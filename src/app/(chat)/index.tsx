@@ -1,133 +1,193 @@
-import { FlatList, RefreshControl, View } from "react-native";
-import { Text } from "@/src/components/Text";
-import { Link } from "expo-router";
-import { IconSymbol } from "@/src/components/IconSymbol";
-import { database, appwriteConfig } from "@/src/utils/appwrite";
-import { useState, useEffect } from "react";
-import { ChatRoom } from "@/src/utils/types";
-import { Query } from "react-native-appwrite";
+import React from 'react';
+import { View, StyleSheet, Pressable, Alert } from 'react-native';
+import { Text } from '@/src/components/Text';
+import { IconSymbol } from '@/src/components/IconSymbol';
+import { useUser } from '@clerk/clerk-expo';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { testGeminiAPI, testGeminiVisionAPI } from '@/src/lib/ai/test-api';
+import { testSupabaseConnection, testSupabaseAuth, testLoadTestUser } from '@/src/lib/database/test-supabase';
 
-export default function Index() {
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+export default function Dashboard() {
+  const { user } = useUser();
+  const router = useRouter();
 
-  useEffect(() => {
-    fetchChatRooms();
-  }, []);
-
-  const handleRefresh = async () => {
-    try {
-      setIsRefreshing(true);
-      await fetchChatRooms();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsRefreshing(false);
-    }
+  const handleFoodScanning = () => {
+    router.push('/camera/food-capture');
   };
 
-  const fetchChatRooms = async () => {
+  const handleBarcodeScanning = () => {
+    router.push('/camera/barcode-scanner');
+  };
+
+  const handleTestAPI = async () => {
     try {
-      const { documents, total } = await database.listDocuments(
-        appwriteConfig.db,
-        appwriteConfig.col.chatRooms,
-        [Query.limit(100)]
+      Alert.alert('Testing Connections...', 'Please wait while we test all API connections.');
+      
+      // Test Google Gemini APIs
+      const geminiWorks = await testGeminiAPI();
+      const visionWorks = await testGeminiVisionAPI();
+      
+      // Test Supabase
+      const supabaseWorks = await testSupabaseConnection();
+      const supabaseAuthWorks = await testSupabaseAuth();
+      const testUserWorks = await testLoadTestUser();
+      
+      const results = [
+        `Gemini API: ${geminiWorks ? '✅' : '❌'}`,
+        `Vision API: ${visionWorks ? '✅' : '❌'}`,
+        `Supabase DB: ${supabaseWorks ? '✅' : '❌'}`,
+        `Supabase Auth: ${supabaseAuthWorks ? '✅' : '❌'}`,
+        `Test User: ${testUserWorks ? '✅' : '❌'}`
+      ].join('\n');
+      
+      const allWorking = geminiWorks && visionWorks && supabaseWorks && supabaseAuthWorks && testUserWorks;
+      
+      Alert.alert(
+        allWorking ? '✅ All Tests Passed!' : '⚠️ Some Tests Failed',
+        results
       );
-
-      console.log("total", total);
-
-      console.log("docs", JSON.stringify(documents, null, 2));
-
-      // Map the Document objects to ChatRoom objects
-      const rooms = documents.map((doc) => ({
-        id: doc.$id,
-        title: doc.title,
-        description: doc.description,
-        isPrivate: doc.isPrivate,
-        createdAt: new Date(doc.createdAt),
-        updatedAt: new Date(doc.updatedAt),
-      }));
-
-      setChatRooms(rooms);
+      
     } catch (error) {
-      console.error(error);
+      Alert.alert('❌ Test Error', 'Error running tests: ' + error);
     }
   };
 
   return (
-    <FlatList
-      data={chatRooms}
-      keyExtractor={(item) => item.id}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-      }
-      renderItem={({ item }) => {
-        return (
-          <Link
-            href={{
-              pathname: "/[chat]",
-              params: { chat: item.id },
-            }}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.welcomeText}>
+            Welcome back, {user?.firstName || 'User'}!
+          </Text>
+          <Text style={styles.subText}>
+            What would you like to analyze today?
+          </Text>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <Pressable 
+            style={styles.scanButton}
+            onPress={handleFoodScanning}
           >
-            <View
-              style={{
-                gap: 6,
-                padding: 16,
-                width: "100%",
-                borderRadius: 16,
-                alignItems: "center",
-                flexDirection: "row",
-                backgroundColor: "#262626",
-                justifyContent: "space-between",
-              }}
-            >
-              <ItemTitleAndDescription
-                title={item.title}
-                description={item.description}
-                isPrivate={item.isPrivate}
+            <View style={styles.buttonContent}>
+              <IconSymbol 
+                name="camera.fill" 
+                size={40} 
+                color="#007AFF" 
               />
-              <IconSymbol name="chevron.right" size={20} color="#666666" />
+              <Text style={styles.buttonTitle}>Food Scanning</Text>
+              <Text style={styles.buttonSubtitle}>
+                Take a photo of your food to get nutrition info and insulin recommendations
+              </Text>
             </View>
-          </Link>
-        );
-      }}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{
-        padding: 16,
-        gap: 16,
-      }}
-    />
+          </Pressable>
+
+          <Pressable 
+            style={styles.scanButton}
+            onPress={handleBarcodeScanning}
+          >
+            <View style={styles.buttonContent}>
+              <IconSymbol 
+                name="barcode.viewfinder" 
+                size={40} 
+                color="#007AFF" 
+              />
+              <Text style={styles.buttonTitle}>Barcode Scanning</Text>
+              <Text style={styles.buttonSubtitle}>
+                Scan product barcodes to get detailed nutrition information
+              </Text>
+            </View>
+          </Pressable>
+
+          {/* Temporary API Test Button */}
+          <Pressable 
+            style={[styles.scanButton, { backgroundColor: '#2c2c2c' }]}
+            onPress={handleTestAPI}
+          >
+            <View style={styles.buttonContent}>
+              <IconSymbol 
+                name="gear" 
+                size={30} 
+                color="#FFA500" 
+              />
+              <Text style={styles.buttonTitle}>Test All Connections</Text>
+              <Text style={styles.buttonSubtitle}>
+                Test Google Gemini APIs, Supabase database, and user data
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Your diabetes management companion
+          </Text>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
-function ItemTitle({
-  title,
-  isPrivate,
-}: {
-  title: string;
-  isPrivate: boolean;
-}) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-      <Text style={{ fontSize: 17 }}>{title}</Text>
-      {isPrivate && <IconSymbol name="lock.fill" size={20} color="#666666" />}
-    </View>
-  );
-}
-
-function ItemTitleAndDescription({
-  title,
-  description,
-  isPrivate,
-}: {
-  title: string;
-  description: string;
-  isPrivate: boolean;
-}) {
-  return (
-    <View style={{ gap: 4 }}>
-      <ItemTitle title={title} isPrivate={isPrivate} />
-      <Text style={{ fontSize: 13, color: "#666666" }}>{description}</Text>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
+  },
+  header: {
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  subText: {
+    fontSize: 16,
+    color: '#999999',
+  },
+  buttonContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 20,
+  },
+  scanButton: {
+    backgroundColor: '#1c1c1c',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  buttonContent: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  buttonTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  buttonSubtitle: {
+    fontSize: 14,
+    color: '#999999',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666666',
+    fontStyle: 'italic',
+  },
+});

@@ -1,0 +1,41 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "done": "Hecho"
+  },
+  "food": {
+    "scanning": "Escaneando Comida",
+    "capture": "Capturar Comida",
+    "analyzing": "Analizando...",
+    "results": "Resultados de Análisis de Comida",
+    "nutrition": "Información Nutricional",
+    "insulin": "Cálculo de Insulina",
+    "calories": "Calorías",
+    "carbs": "Carbohidratos",
+    "protein": "Proteína",
+    "fat": "Grasa",
+    "sugar": "Azúcar",
+    "fiber": "Fibra"
+  },
+  "barcode": {
+    "scanning": "Escaneando Código de Barras",
+    "scan": "Escanear Código de Barras",
+    "product": "Información del Producto",
+    "notFound": "Producto no encontrado"
+  },
+  "dashboard": {
+    "welcome": "Bienvenido",
+    "scanFood": "Escanear Comida",
+    "scanBarcode": "Escanear Código de Barras",
+    "history": "Historial",
+    "settings": "Configuración"
+  }
+}

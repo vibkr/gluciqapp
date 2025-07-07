@@ -1,5 +1,23 @@
 // Global type definitions for GluciQ app
 
+export interface Theme {
+  id: string;
+  name: string;
+  mode: 'light' | 'dark';
+  colors: {
+    primary: string;
+    secondary: string;
+    background: string;
+    surface: string;
+    text: string;
+    textSecondary: string;
+    border: string;
+    success: string;
+    warning: string;
+    error: string;
+  };
+}
+
 export interface User {
   id: string;
   email: string;
@@ -33,23 +51,6 @@ export interface InsulinDose {
   createdAt: Date;
 }
 
-export interface Theme {
-  id: string;
-  name: string;
-  colors: {
-    primary: string;
-    secondary: string;
-    background: string;
-    surface: string;
-    text: string;
-    textSecondary: string;
-    border: string;
-    success: string;
-    warning: string;
-    error: string;
-  };
-  mode: 'light' | 'dark';
-}
 
 export interface AppConfig {
   theme: Theme;

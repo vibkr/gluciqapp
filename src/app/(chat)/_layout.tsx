@@ -4,7 +4,11 @@ import { Image } from "react-native";
 import { useUser } from "@clerk/clerk-expo";
 
 export default function RootChatLayout() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+
+  if (!isLoaded) {
+    return null;
+  }
 
   return (
     <Stack>
@@ -47,6 +51,31 @@ export default function RootChatLayout() {
       <Stack.Screen
         name="settings/[chat]"
         options={{ presentation: "modal", headerTitle: "Room Settings" }}
+      />
+      
+      {/* Camera routes */}
+      <Stack.Screen 
+        name="camera/food-capture" 
+        options={{ 
+          headerTitle: "Scan Food",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen 
+        name="camera/barcode-scanner" 
+        options={{ 
+          headerTitle: "Scan Barcode",
+          presentation: "modal" 
+        }} 
+      />
+      
+      {/* Analysis routes */}
+      <Stack.Screen 
+        name="analysis/food-results" 
+        options={{ 
+          headerTitle: "Food Analysis",
+          presentation: "modal" 
+        }} 
       />
     </Stack>
   );

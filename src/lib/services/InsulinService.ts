@@ -48,7 +48,7 @@ export class InsulinService {
       if (!carbohydrates && input.mealId) {
         const mealResponse = await this.loggingClient.get<MealEntry>(`/logging_service/meal_entries/${input.mealId}`);
         if (mealResponse.success && mealResponse.data) {
-          carbohydrates = mealResponse.data.total_nutrition.carbohydrates;
+          carbohydrates = mealResponse.data.total_carbs_g;
         }
       }
 

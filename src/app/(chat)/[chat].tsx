@@ -18,65 +18,23 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { IconSymbol } from "@/src/components/IconSymbol";
 import { useUser } from "@clerk/clerk-expo";
-import { FlatList } from "react-native";
-import { Secondary, Primary, Red } from "@/colors";
+import { Secondary, Primary } from "@/colors";
 export default function ChatRoomScreen() {
   const { chat: chatRoomId } = useLocalSearchParams();
   const { user } = useUser();
 
-  if (!chatRoomId) {
-    return <Text>We couldn't find this chat room 🥲</Text>;
-  }
-
+  // All hooks must be called before any early returns
   const [messageContent, setMessageContent] = React.useState("");
   const [chatRoom, setChatRoom] = React.useState<ChatRoom | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const headerHeight = Platform.OS === "ios" ? useHeaderHeight() : 0;
+  const headerHeight = useHeaderHeight();
   const textInputRef = React.useRef<TextInput>(null);
 
-  React.useEffect(() => {
-    handleFirstLoad();
-  }, []);
-
-  // Focus the text input when the component mounts
-  React.useEffect(() => {
-    if (!isLoading) {
-      // Wait until loading is complete before focusing
-      setTimeout(() => {
-        textInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isLoading]);
-
-  // Subscribe to messages
-  React.useEffect(() => {
-    // listen for updates on the chat room document
-    const channel = `databases.${appwriteConfig.db}.collections.${appwriteConfig.col.chatRooms}.documents.${chatRoomId}`;
-
-    const unsubscribe = client.subscribe(channel, () => {
-      console.log("chat room updated");
-      getMessages();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [chatRoomId]);
-
-  async function handleFirstLoad() {
-    try {
-      await getChatRoom();
-      await getMessages();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   // get chat room info by chat id
-  async function getChatRoom() {
+  const getChatRoom = React.useCallback(async () => {
+    if (!chatRoomId) return;
+    
     const document = await database.getDocument(
       appwriteConfig.db,
       appwriteConfig.col.chatRooms,
@@ -88,12 +46,14 @@ export default function ChatRoomScreen() {
      * Then, we need to cast the document to ChatRoom to get the correct type 🤷‍♂️
      */
     setChatRoom(document as unknown as ChatRoom);
-  }
+  }, [chatRoomId]);
 
   // get messages associated with chat id
-  async function getMessages() {
+  const getMessages = React.useCallback(async () => {
+    if (!chatRoomId) return;
+    
     try {
-      const { documents, total } = await database.listDocuments(
+      const { documents } = await database.listDocuments(
         appwriteConfig.db,
         appwriteConfig.col.message,
         [
@@ -110,7 +70,55 @@ export default function ChatRoomScreen() {
     } catch (error) {
       console.error(error);
     }
+  }, [chatRoomId]);
+
+  const handleFirstLoad = React.useCallback(async () => {
+    try {
+      await getChatRoom();
+      await getMessages();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getChatRoom, getMessages]);
+
+  React.useEffect(() => {
+    handleFirstLoad();
+  }, [handleFirstLoad]);
+
+  // Focus the text input when the component mounts
+  React.useEffect(() => {
+    if (!isLoading) {
+      // Wait until loading is complete before focusing
+      setTimeout(() => {
+        textInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isLoading]);
+
+  // Subscribe to messages
+  React.useEffect(() => {
+    if (!chatRoomId) return;
+    
+    // listen for updates on the chat room document
+    const channel = `databases.${appwriteConfig.db}.collections.${appwriteConfig.col.chatRooms}.documents.${chatRoomId}`;
+
+    const unsubscribe = client.subscribe(channel, () => {
+      console.log("chat room updated");
+      getMessages();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [chatRoomId, getMessages]);
+
+  if (!chatRoomId) {
+    return <Text>We couldn't find this chat room 🥲</Text>;
   }
+
+
 
   async function handleSendMessage() {
     if (messageContent.trim() === "") return;
@@ -175,7 +183,7 @@ export default function ChatRoomScreen() {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={"padding"}
-          keyboardVerticalOffset={headerHeight}
+          keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
         >
           <LegendList
             data={messages}

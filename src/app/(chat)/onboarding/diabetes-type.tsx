@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, StyleSheet, Pressable, TextInput, ScrollView, Alert } from 'react-native';
 import { Text } from '@/src/components/Text';
 import { useRouter } from 'expo-router';
 import { OnboardingStep } from '@/src/components/onboarding/OnboardingStep';
 import { userActions } from '@/src/stores/userStore';
+import { onboardingLogger } from '@/src/lib/utils/logger';
 import type { DiabetesType } from '@/src/lib/database/types';
 
 const diabetesTypes: { value: DiabetesType; label: string; description: string }[] = [

@@ -5,6 +5,7 @@ import { syncedSupabase } from '@legendapp/state/sync-plugins/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '@clerk/clerk-expo';
 import { supabaseClientManager } from '../lib/database';
+import { userLogger, onboardingLogger, databaseLogger } from '../lib/utils/logger';
 import type { 
   User, 
   UserPreferences, 
@@ -215,18 +216,41 @@ if (supabaseClientManager.isAvailable) {
 
 // User actions
 export const userActions = {
+  // Helper to ensure profile is ready for updates
+  async ensureProfileReady(): Promise<boolean> {
+    const profile = userStore.profile.get();
+    const isLoading = userStore.isLoading.get();
+    
+    if (isLoading) {
+      userLogger.debug('Profile not ready - still loading');
+      return false;
+    }
+    
+    if (!profile) {
+      userLogger.warn('Profile not ready - no profile found');
+      return false;
+    }
+    
+    userLogger.debug(`Profile ready for user: ${profile.id}`);
+    return true;
+  },
+
   // Initialize user data from Clerk
   async initializeUser(clerkUser: any) {
     try {
+      userLogger.info('Starting user initialization');
       userStore.isLoading.set(true);
       userStore.syncError.set(null);
       
       const userId = clerkUser.id;
       const email = clerkUser.emailAddresses[0]?.emailAddress || '';
       
+      userLogger.debug(`Initializing user with Clerk ID: ${userId}, Email: ${email}`);
+      
       // Check if user exists in Supabase
       let existingUser = null;
       if (supabaseClientManager.isAvailable) {
+        databaseLogger.debug('Checking for existing user in Supabase');
         const { data, error } = await supabaseClientManager.userService
           .from('users')
           .select('*')
@@ -235,10 +259,15 @@ export const userActions = {
         
         if (!error && data) {
           existingUser = data;
+          userLogger.info(`Found existing user: ${existingUser.id}`);
+        } else if (error && error.code !== 'PGRST116') {
+          // PGRST116 is "not found" error, which is expected for new users
+          databaseLogger.warn('Error checking for existing user', error);
         }
       }
       
       if (existingUser) {
+        userLogger.info('Loading existing user data');
         // Load existing user data
         userStore.profile.set(existingUser);
         await userActions.loadUserPreferences(existingUser.id);
@@ -246,8 +275,9 @@ export const userActions = {
         
         // Update profile completion percentage
         userStore.profileCompletionPercentage.set(userComputed.profileCompletionPercentage);
+        userLogger.debug(`Profile completion: ${userComputed.profileCompletionPercentage}%`);
       } else {
-        console.log('Creating new user for Clerk user:', userId);
+        userLogger.info('Creating new user for Clerk user');
         
         // Create new user record
         const newUser: NewUser = {
@@ -273,33 +303,38 @@ export const userActions = {
           onboarding_step: OnboardingStep.WELCOME,
         };
         
-        console.log('Creating user with data:', JSON.stringify(newUser, null, 2));
+        userLogger.debug(`Creating user with data: ${JSON.stringify(newUser, null, 2)}`);
         
         const createdUser = await userActions.createUser(newUser);
         if (createdUser) {
-          console.log('User created successfully:', createdUser.id);
+          userLogger.info(`User created successfully: ${createdUser.id}`);
           userStore.profile.set(createdUser);
           userStore.onboardingStep.set(OnboardingStep.WELCOME);
           userStore.onboardingCompleted.set(false);
           userStore.isOnboardingActive.set(true);
         } else {
-          console.error('Failed to create user - will continue with limited functionality');
+          userLogger.warn('Failed to create user - continuing with limited functionality');
           // Set a minimal profile for offline mode
-          userStore.profile.set({
+          const fallbackUser: User = {
             id: userId,
             ...newUser,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_active_at: new Date().toISOString(),
-          });
+          };
+          userStore.profile.set(fallbackUser);
+          userStore.onboardingStep.set(OnboardingStep.WELCOME);
+          userStore.onboardingCompleted.set(false);
+          userStore.isOnboardingActive.set(true);
         }
       }
       
       userStore.isLoading.set(false);
       userStore.lastSyncTime.set(new Date().toISOString());
+      userLogger.info('User initialization completed successfully');
       
     } catch (error) {
-      console.error('Error initializing user:', error);
+      userLogger.error('Error initializing user', error as Error);
       userStore.syncError.set(error instanceof Error ? error.message : 'Unknown error');
       userStore.isLoading.set(false);
     }
@@ -351,12 +386,24 @@ export const userActions = {
   // Update user profile
   async updateProfile(updates: Partial<User>): Promise<boolean> {
     try {
+      userLogger.debug(`Attempting to update profile with updates: ${JSON.stringify(updates)}`);
+      
+      // Ensure profile is ready before updating
+      const isReady = await userActions.ensureProfileReady();
+      if (!isReady) {
+        userLogger.warn('Profile not ready for updates - skipping update');
+        return false;
+      }
+      
       userStore.isSyncing.set(true);
       const currentProfile = userStore.profile.get();
       
       if (!currentProfile) {
+        userLogger.error('No user profile to update - profile not initialized');
         throw new Error('No user profile to update');
       }
+      
+      userLogger.debug(`Updating profile for user: ${currentProfile.id}`);
       
       const updatedData = {
         ...updates,
@@ -437,11 +484,21 @@ export const userActions = {
   // Create or update user preferences
   async updatePreferences(preferences: Partial<UserPreferences>): Promise<boolean> {
     try {
+      userLogger.debug(`Attempting to update preferences: ${JSON.stringify(preferences)}`);
+      
+      // Ensure profile is ready before updating
+      const isReady = await userActions.ensureProfileReady();
+      if (!isReady) {
+        userLogger.warn('Profile not ready for preferences update - skipping');
+        return false;
+      }
+      
       userStore.isSyncing.set(true);
       const currentProfile = userStore.profile.get();
       const currentPreferences = userStore.preferences.get();
       
       if (!currentProfile) {
+        userLogger.error('No user profile found for preferences update');
         throw new Error('No user profile found');
       }
       
@@ -478,7 +535,7 @@ export const userActions = {
             meal_reminders: true,
             data_sharing_enabled: false,
             analytics_enabled: true,
-            theme: 'system',
+            theme: 'auto', // Changed from 'system' to 'auto' to match constraint
             font_size: 'medium',
             high_contrast: false,
             reduce_motion: false,
@@ -523,11 +580,21 @@ export const userActions = {
   // Create or update diabetes settings
   async updateDiabetesSettings(settings: Partial<UserDiabetesSettings>): Promise<boolean> {
     try {
+      userLogger.debug(`Attempting to update diabetes settings: ${JSON.stringify(settings)}`);
+      
+      // Ensure profile is ready before updating
+      const isReady = await userActions.ensureProfileReady();
+      if (!isReady) {
+        userLogger.warn('Profile not ready for diabetes settings update - skipping');
+        return false;
+      }
+      
       userStore.isSyncing.set(true);
       const currentProfile = userStore.profile.get();
       const currentSettings = userStore.diabetesSettings.get();
       
       if (!currentProfile) {
+        userLogger.error('No user profile found for diabetes settings update');
         throw new Error('No user profile found');
       }
       
@@ -557,15 +624,16 @@ export const userActions = {
           const newSettings: NewUserDiabetesSettings = {
             user_id: currentProfile.id,
             carb_ratios: [
-              { meal: 'breakfast', ratio: 15 },
-              { meal: 'lunch', ratio: 15 },
-              { meal: 'dinner', ratio: 15 },
-              { meal: 'snack', ratio: 20 }
+              { time_start: '06:00', time_end: '11:00', ratio: 15 }, // Breakfast - 1:15
+              { time_start: '11:00', time_end: '17:00', ratio: 12 }, // Lunch - 1:12
+              { time_start: '17:00', time_end: '22:00', ratio: 10 }, // Dinner - 1:10
+              { time_start: '22:00', time_end: '06:00', ratio: 20 }  // Night - 1:20
             ],
             correction_factors: [
-              { time: 'morning', factor: 50 },
-              { time: 'afternoon', factor: 50 },
-              { time: 'evening', factor: 50 }
+              { time_start: '06:00', time_end: '11:00', factor: 50 }, // Morning - 1:50
+              { time_start: '11:00', time_end: '17:00', factor: 60 }, // Afternoon - 1:60
+              { time_start: '17:00', time_end: '22:00', factor: 40 }, // Evening - 1:40
+              { time_start: '22:00', time_end: '06:00', factor: 70 }  // Night - 1:70
             ],
             target_glucose_min: 80,
             target_glucose_max: 180,
@@ -625,6 +693,13 @@ export const userActions = {
     if (success) {
       userStore.onboardingCompleted.set(true);
       userStore.isOnboardingActive.set(false);
+      
+      // Ensure diabetes settings are created
+      const currentSettings = userStore.diabetesSettings.get();
+      if (!currentSettings) {
+        userLogger.info('Creating default diabetes settings for completed onboarding');
+        await userActions.updateDiabetesSettings({});
+      }
     }
     
     return success;

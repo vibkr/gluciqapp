@@ -1,35 +1,57 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, Pressable } from 'react-native';
+import { View, StyleSheet, TextInput, Pressable, ScrollView, Alert } from 'react-native';
 import { Text } from '@/src/components/Text';
 import { useRouter } from 'expo-router';
 import { OnboardingStep } from '@/src/components/onboarding/OnboardingStep';
 import { userActions } from '@/src/stores/userStore';
+import { onboardingLogger } from '@/src/lib/utils/logger';
 
 export default function BasicProfile() {
   const router = useRouter();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
-  const isFormValid = firstName.trim() && lastName.trim() && dateOfBirth;
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  
+  // Validate date format YYYY-MM-DD
+  const isValidDate = (dateString: string) => {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date.getTime()) && dateString === date.toISOString().split('T')[0];
+  };
+  
+  const isFormValid = firstName.trim() && lastName.trim() && isValidDate(dateOfBirth);
 
   const handleNext = async () => {
-    if (!isFormValid) return;
+    if (!isFormValid) {
+      Alert.alert('Incomplete Information', 'Please fill in all required fields.');
+      return;
+    }
 
     try {
+      onboardingLogger.info('Updating basic profile information');
+      
       // Update user profile with basic information
-      await userActions.updateProfile({
+      const success = await userActions.updateProfile({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         phone: phone.trim() || undefined,
-        date_of_birth: dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : undefined,
+        date_of_birth: dateOfBirth || undefined,
       });
+
+      if (!success) {
+        Alert.alert('Error', 'Failed to save profile information. Please try again.');
+        return;
+      }
 
       // Move to next onboarding step
       await userActions.updateOnboardingStep(2);
+      onboardingLogger.info('Moving to diabetes type selection');
       router.push('/onboarding/diabetes-type');
     } catch (error) {
-      console.error('Error updating profile:', error);
+      onboardingLogger.error('Error updating profile', error as Error);
+      Alert.alert('Error', 'Failed to save profile information. Please try again.');
     }
   };
 
@@ -37,13 +59,7 @@ export default function BasicProfile() {
     router.push('/onboarding/diabetes-type');
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+
 
   return (
     <OnboardingStep
@@ -57,73 +73,89 @@ export default function BasicProfile() {
       nextLabel="Continue"
       nextDisabled={!isFormValid}
     >
-      <View style={styles.content}>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>First Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholder="Enter your first name"
-            placeholderTextColor="#666666"
-            autoCapitalize="words"
-            autoComplete="given-name"
-          />
-        </View>
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>First Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="Enter your first name"
+              placeholderTextColor="#666666"
+              autoCapitalize="words"
+              autoComplete="given-name"
+              returnKeyType="next"
+            />
+          </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Last Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={lastName}
-            onChangeText={setLastName}
-            placeholder="Enter your last name"
-            placeholderTextColor="#666666"
-            autoCapitalize="words"
-            autoComplete="family-name"
-          />
-        </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Last Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Enter your last name"
+              placeholderTextColor="#666666"
+              autoCapitalize="words"
+              autoComplete="family-name"
+              returnKeyType="next"
+            />
+          </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="Enter your phone number"
-            placeholderTextColor="#666666"
-            keyboardType="phone-pad"
-            autoComplete="tel"
-          />
-        </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="Enter your phone number"
+              placeholderTextColor="#666666"
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              returnKeyType="next"
+            />
+          </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Date of Birth *</Text>
-          <TextInput
-            style={styles.input}
-            value={dateOfBirth ? formatDate(dateOfBirth) : ''}
-            onChangeText={(text) => {
-              // Simple date parsing for YYYY-MM-DD format
-              const date = new Date(text);
-              if (!isNaN(date.getTime())) {
-                setDateOfBirth(date);
-              }
-            }}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#666666"
-            keyboardType="numeric"
-          />
-        </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Date of Birth *</Text>
+            <TextInput
+              style={[styles.input, !isValidDate(dateOfBirth) && dateOfBirth.length > 0 && styles.inputError]}
+              value={dateOfBirth}
+              onChangeText={setDateOfBirth}
+              placeholder="YYYY-MM-DD (e.g., 1990-01-15)"
+              placeholderTextColor="#666666"
+              keyboardType="numeric"
+              maxLength={10}
+              returnKeyType="done"
+            />
+            {dateOfBirth.length > 0 && !isValidDate(dateOfBirth) && (
+              <Text style={styles.errorText}>Please enter a valid date in YYYY-MM-DD format</Text>
+            )}
+          </View>
 
-        <Text style={styles.note}>
-          * Required fields. This information helps us provide personalized recommendations.
-        </Text>
-      </View>
+          <Text style={styles.note}>
+            * Required fields. This information helps us provide personalized recommendations.
+          </Text>
+        </View>
+      </ScrollView>
     </OnboardingStep>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
   content: {
     flex: 1,
     paddingTop: 20,
@@ -148,6 +180,15 @@ const styles = StyleSheet.create({
     borderColor: '#333333',
   },
 
+  inputError: {
+    borderColor: '#FF6B6B',
+    borderWidth: 2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    marginTop: 4,
+  },
   note: {
     fontSize: 14,
     color: '#999999',

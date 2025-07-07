@@ -12,6 +12,8 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { FoodAnalysisPipeline } from '@/src/lib/services/FoodAnalysisPipeline';
+import { userStore } from '@/src/stores/userStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,6 +24,9 @@ export default function FoodCaptureScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const foodPipeline = new FoodAnalysisPipeline();
 
   if (!permission) {
     return <View />;
@@ -39,7 +44,7 @@ export default function FoodCaptureScreen() {
   }
 
   const takePicture = async () => {
-    if (!cameraRef.current || isCapturing) return;
+    if (!cameraRef.current || isCapturing || isAnalyzing) return;
     
     try {
       setIsCapturing(true);
@@ -51,28 +56,57 @@ export default function FoodCaptureScreen() {
       
       if (photo?.uri) {
         console.log('Photo captured:', photo.uri);
-        // For now, just show an alert. Later we'll integrate with AI analysis
-        Alert.alert(
-          'Photo Captured!', 
-          'Food photo captured successfully. AI analysis will be implemented next.',
-          [
-            {
-              text: 'Take Another',
-              style: 'default'
-            },
-            {
-              text: 'Go Back',
-              onPress: () => router.back(),
-              style: 'cancel'
-            }
-          ]
+        setIsCapturing(false);
+        setIsAnalyzing(true);
+        
+        // Get current user
+        const currentProfile = userStore.profile.get();
+        if (!currentProfile) {
+          Alert.alert('Error', 'User profile not found. Please complete onboarding first.');
+          return;
+        }
+
+        // Run complete food analysis pipeline
+        const result = await foodPipeline.analyzeFoodImage(
+          photo.uri,
+          currentProfile.id,
+          {
+            image_width: photo.width,
+            image_height: photo.height,
+            capture_location_lat: null, // Could add GPS if needed
+            capture_location_lng: null
+          }
         );
+
+        if (result.success) {
+          // Navigate to results page with analysis data
+          router.push({
+            pathname: '/analysis/food-results',
+            params: {
+              analysisId: result.analysisResult.id,
+              imageId: result.imageRecord.id,
+              totalCarbs: result.insulinCalculation.carb_dose.units * result.insulinCalculation.carb_dose.ratio_used,
+              recommendedDose: result.insulinCalculation.total_recommendation.units,
+              confidence: result.insulinCalculation.total_recommendation.confidence_level
+            }
+          });
+        } else {
+          Alert.alert(
+            'Analysis Failed',
+            result.error || 'Failed to analyze food image. Please try again.',
+            [
+              { text: 'Try Again', style: 'default' },
+              { text: 'Go Back', onPress: () => router.back(), style: 'cancel' }
+            ]
+          );
+        }
       }
     } catch (error) {
-      console.error('Error taking picture:', error);
-      Alert.alert('Error', 'Failed to capture photo. Please try again.');
+      console.error('Error in food capture process:', error);
+      Alert.alert('Error', 'Failed to process food image. Please try again.');
     } finally {
       setIsCapturing(false);
+      setIsAnalyzing(false);
     }
   };
 
@@ -93,6 +127,7 @@ export default function FoodCaptureScreen() {
             <TouchableOpacity 
               style={styles.closeButton}
               onPress={() => router.back()}
+              disabled={isAnalyzing}
             >
               <Ionicons name="close" size={30} color="white" />
             </TouchableOpacity>
@@ -100,6 +135,7 @@ export default function FoodCaptureScreen() {
             <TouchableOpacity 
               style={styles.flipButton}
               onPress={toggleCameraFacing}
+              disabled={isAnalyzing}
             >
               <Ionicons name="camera-reverse" size={30} color="white" />
             </TouchableOpacity>
@@ -109,7 +145,7 @@ export default function FoodCaptureScreen() {
           <View style={styles.centerGuide}>
             <View style={styles.frameGuide}>
               <Text style={styles.guideText}>
-                Center your food in the frame
+                {isAnalyzing ? 'Analyzing food...' : 'Center your food in the frame'}
               </Text>
             </View>
           </View>
@@ -117,22 +153,34 @@ export default function FoodCaptureScreen() {
           {/* Bottom controls */}
           <View style={styles.controls}>
             <Text style={styles.instructionText}>
-              Position food clearly in the frame and tap to capture
+              {isAnalyzing 
+                ? 'Please wait while we analyze your food and calculate insulin...'
+                : 'Position food clearly in the frame and tap to capture'
+              }
             </Text>
             
             <View style={styles.captureButtonContainer}>
               <TouchableOpacity 
-                style={[styles.captureButton, isCapturing && styles.captureButtonDisabled]}
+                style={[
+                  styles.captureButton, 
+                  (isCapturing || isAnalyzing) && styles.captureButtonDisabled
+                ]}
                 onPress={takePicture}
-                disabled={isCapturing}
+                disabled={isCapturing || isAnalyzing}
               >
-                {isCapturing ? (
+                {(isCapturing || isAnalyzing) ? (
                   <ActivityIndicator size="large" color="white" />
                 ) : (
                   <View style={styles.captureButtonInner} />
                 )}
               </TouchableOpacity>
             </View>
+            
+            {isAnalyzing && (
+              <Text style={styles.analysisText}>
+                🔍 Analyzing food with AI...
+              </Text>
+            )}
           </View>
         </View>
       </CameraView>
@@ -250,5 +298,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  analysisText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 20,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
 });

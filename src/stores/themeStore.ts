@@ -99,18 +99,24 @@ export const themeActions = {
   // Get available theme bases (without light/dark suffix)
   getThemeBases: () => {
     const bases = new Set<string>();
-    availableThemes.forEach(theme => {
-      const base = theme.id.replace('-light', '').replace('-dark', '');
-      bases.add(base);
-    });
+    // Add safety check to prevent forEach error
+    const themes = availableThemes || [];
+    if (Array.isArray(themes)) {
+      themes.forEach(theme => {
+        const base = theme.id.replace('-light', '').replace('-dark', '');
+        bases.add(base);
+      });
+    }
     return Array.from(bases);
   },
 
   // Get themes for a specific base
   getThemesForBase: (base: string) => {
-    return availableThemes.filter(theme => 
+    // Add safety check
+    const themes = availableThemes || [];
+    return Array.isArray(themes) ? themes.filter(theme => 
       theme.id.startsWith(base)
-    );
+    ) : [];
   },
 };
 

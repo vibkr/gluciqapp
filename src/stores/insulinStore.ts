@@ -16,13 +16,13 @@ interface InsulinStoreState {
   insulinOnBoard: {
     active_units: number;
     recent_doses: InsulinDose[];
-    breakdown: Array<{
+    breakdown: {
       dose_id: string;
       time: string;
       original_units: number;
       remaining_units: number;
       activity_percentage: number;
-    }>;
+    }[];
   } | null;
   effectiveness: {
     average_response: number;

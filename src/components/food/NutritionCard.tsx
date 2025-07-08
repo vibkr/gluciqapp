@@ -39,10 +39,41 @@ export default function NutritionCard({
 }: NutritionCardProps) {
   const { theme } = useTheme();
 
-  const macroPercentages = {
-    carbs: (nutrition.carbohydrates * 4) / nutrition.calories * 100,
-    protein: (nutrition.protein * 4) / nutrition.calories * 100,
-    fat: (nutrition.fat * 9) / nutrition.calories * 100,
+  // Add null safety checks for nutrition data
+  const safeNutrition = {
+    calories: nutrition?.calories || 0,
+    carbohydrates: nutrition?.carbohydrates || 0,
+    fat: nutrition?.fat || 0,
+    protein: nutrition?.protein || 0,
+    fiber: nutrition?.fiber || 0,
+    sugar: nutrition?.sugar || 0,
+    sodium: nutrition?.sodium,
+  };
+
+  // Safe calculation of macro percentages with fallback values
+  const calculateMacroPercentages = () => {
+    if (!safeNutrition.calories || safeNutrition.calories <= 0) {
+      return { carbs: 0, protein: 0, fat: 0 };
+    }
+    
+    const carbsPercent = (safeNutrition.carbohydrates * 4) / safeNutrition.calories * 100;
+    const proteinPercent = (safeNutrition.protein * 4) / safeNutrition.calories * 100;
+    const fatPercent = (safeNutrition.fat * 9) / safeNutrition.calories * 100;
+    
+    return {
+      carbs: isFinite(carbsPercent) ? carbsPercent : 0,
+      protein: isFinite(proteinPercent) ? proteinPercent : 0,
+      fat: isFinite(fatPercent) ? fatPercent : 0,
+    };
+  };
+
+  const macroPercentages = calculateMacroPercentages();
+
+  // Ensure all percentage values are valid numbers before using toFixed
+  const safePercentages = {
+    carbs: typeof macroPercentages.carbs === 'number' && isFinite(macroPercentages.carbs) ? macroPercentages.carbs : 0,
+    protein: typeof macroPercentages.protein === 'number' && isFinite(macroPercentages.protein) ? macroPercentages.protein : 0,
+    fat: typeof macroPercentages.fat === 'number' && isFinite(macroPercentages.fat) ? macroPercentages.fat : 0,
   };
 
   const CardWrapper = onPress ? TouchableOpacity : View;
@@ -72,7 +103,7 @@ export default function NutritionCard({
             Calories
           </Text>
           <Text style={[styles.caloriesValue, { color: theme.colors.text }]}>
-            {nutrition.calories}
+            {safeNutrition.calories}
           </Text>
         </View>
 
@@ -83,7 +114,7 @@ export default function NutritionCard({
               Carbohydrates
             </Text>
             <Text style={[styles.macroValue, { color: theme.colors.primary }]}>
-              {nutrition.carbohydrates}g
+              {safeNutrition.carbohydrates}g
             </Text>
           </View>
           
@@ -92,7 +123,7 @@ export default function NutritionCard({
               Protein
             </Text>
             <Text style={[styles.macroValue, { color: theme.colors.text }]}>
-              {nutrition.protein}g
+              {safeNutrition.protein}g
             </Text>
           </View>
           
@@ -101,7 +132,7 @@ export default function NutritionCard({
               Fat
             </Text>
             <Text style={[styles.macroValue, { color: theme.colors.text }]}>
-              {nutrition.fat}g
+              {safeNutrition.fat}g
             </Text>
           </View>
         </View>
@@ -115,7 +146,7 @@ export default function NutritionCard({
                   Fiber
                 </Text>
                 <Text style={[styles.microValue, { color: theme.colors.text }]}>
-                  {nutrition.fiber}g
+                  {safeNutrition.fiber}g
                 </Text>
               </View>
               
@@ -124,17 +155,17 @@ export default function NutritionCard({
                   Sugar
                 </Text>
                 <Text style={[styles.microValue, { color: theme.colors.text }]}>
-                  {nutrition.sugar}g
+                  {safeNutrition.sugar}g
                 </Text>
               </View>
               
-              {nutrition.sodium !== undefined && (
+              {safeNutrition.sodium !== undefined && (
                 <View style={styles.microRow}>
                   <Text style={[styles.microLabel, { color: theme.colors.textSecondary }]}>
                     Sodium
                   </Text>
                   <Text style={[styles.microValue, { color: theme.colors.text }]}>
-                    {nutrition.sodium}mg
+                    {safeNutrition.sodium}mg
                   </Text>
                 </View>
               )}
@@ -155,7 +186,7 @@ export default function NutritionCard({
                     </Text>
                   </View>
                   <Text style={[styles.distributionPercent, { color: theme.colors.text }]}>
-                    {macroPercentages.carbs.toFixed(0)}%
+                    {((safePercentages.carbs || 0)).toFixed(0)}%
                   </Text>
                 </View>
                 
@@ -167,7 +198,7 @@ export default function NutritionCard({
                     </Text>
                   </View>
                   <Text style={[styles.distributionPercent, { color: theme.colors.text }]}>
-                    {macroPercentages.protein.toFixed(0)}%
+                    {((safePercentages.protein || 0)).toFixed(0)}%
                   </Text>
                 </View>
                 
@@ -179,7 +210,7 @@ export default function NutritionCard({
                     </Text>
                   </View>
                   <Text style={[styles.distributionPercent, { color: theme.colors.text }]}>
-                    {macroPercentages.fat.toFixed(0)}%
+                    {((safePercentages.fat || 0)).toFixed(0)}%
                   </Text>
                 </View>
               </View>

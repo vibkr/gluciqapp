@@ -220,13 +220,13 @@ export class InsulinService {
   async getInsulinOnBoard(userId: string): Promise<ApiResponse<{
     active_units: number;
     recent_doses: InsulinDose[];
-    breakdown: Array<{
+    breakdown: {
       dose_id: string;
       time: string;
       original_units: number;
       remaining_units: number;
       activity_percentage: number;
-    }>;
+    }[];
   }>> {
     try {
       // Get recent doses (last 6 hours)
@@ -246,13 +246,13 @@ export class InsulinService {
       const now = Date.now();
       
       let totalActiveUnits = 0;
-      const breakdown: Array<{
+      const breakdown: {
         dose_id: string;
         time: string;
         original_units: number;
         remaining_units: number;
         activity_percentage: number;
-      }> = [];
+      }[] = [];
 
       recentDoses.forEach(dose => {
         const doseTime = new Date(dose.timestamp).getTime();

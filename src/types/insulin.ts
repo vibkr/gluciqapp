@@ -1,16 +1,16 @@
 // Insulin calculation types
 
 export interface InsulinProfile {
-  carb_ratios: Array<{
+  carb_ratios: {
     time_start: string; // HH:MM format
     time_end: string;   // HH:MM format
     ratio: number;      // Grams of carbs per unit of insulin
-  }>;
-  sensitivity_factor: Array<{
+  }[];
+  sensitivity_factor: {
     time_start: string; // HH:MM format
     time_end: string;   // HH:MM format
     factor: number;     // mg/dL per unit of insulin
-  }>;
+  }[];
   action_profile: {
     onset: number;      // Minutes until insulin starts working
     peak: number;       // Minutes to peak effect
@@ -45,11 +45,11 @@ export interface InsulinCalculationResult {
   insulin_on_board: {
     active_units: number;
     remaining_action_time: number;
-    recent_doses: Array<{
+    recent_doses: {
       time: string;
       units: number;
       remaining_activity: number;
-    }>;
+    }[];
   };
   total_recommendation: {
     units: number;

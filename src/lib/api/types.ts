@@ -163,16 +163,16 @@ export interface InsulinDose {
 export interface InsulinProfile {
   id: string;
   user_id: string;
-  carb_ratios: Array<{
+  carb_ratios: {
     time_start: string;
     time_end: string;
     ratio: number;
-  }>;
-  sensitivity_factor: Array<{
+  }[];
+  sensitivity_factor: {
     time_start: string;
     time_end: string;
     factor: number;
-  }>;
+  }[];
   action_profile: {
     onset: number;
     peak: number;
@@ -274,13 +274,13 @@ export interface LegacyMealEntry {
   id: string;
   user_id: string;
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  foods: Array<{
+  foods: {
     food_id: string;
     food_name: string;
     portion_size: number;
     portion_unit: string;
     nutrition: LegacyNutritionFacts;
-  }>;
+  }[];
   total_nutrition: LegacyNutritionFacts;
   logged_at: Date;
   notes?: string;

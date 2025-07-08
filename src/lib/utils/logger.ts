@@ -22,7 +22,7 @@ export interface LogConfig {
 
 class Logger {
   private config: LogConfig;
-  private logEntries: Array<{ level: LogLevel; message: string; timestamp: Date; context?: string }> = [];
+  private logEntries: { level: LogLevel; message: string; timestamp: Date; context?: string }[] = [];
 
   constructor() {
     // Default configuration - can be overridden by environment variables
@@ -140,7 +140,7 @@ class Logger {
     this.config = { ...this.config, ...newConfig };
   }
 
-  getLogEntries(): Array<{ level: LogLevel; message: string; timestamp: Date; context?: string }> {
+  getLogEntries(): { level: LogLevel; message: string; timestamp: Date; context?: string }[] {
     return [...this.logEntries];
   }
 

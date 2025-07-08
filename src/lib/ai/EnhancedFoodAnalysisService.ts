@@ -13,7 +13,7 @@ export interface FoodAnalysisResult {
   barcodeData?: BarcodeNutritionData;
   
   // Combined/enhanced results
-  foods: Array<{
+  foods: {
     id: string;
     name: string;
     category: string;
@@ -41,7 +41,7 @@ export interface FoodAnalysisResult {
     isDiabetesFriendly?: boolean;
     preparation_notes?: string;
     uncertainty_flags?: string[];
-  }>;
+  }[];
   
   recommendations: {
     total_carbs: number;

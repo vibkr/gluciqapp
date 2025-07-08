@@ -132,11 +132,11 @@ export class InsulinCalculator {
   private static createIOBInfo(profile: InsulinProfile, activeUnits: number): {
     active_units: number;
     remaining_action_time: number;
-    recent_doses: Array<{
+    recent_doses: {
       time: string;
       units: number;
       remaining_activity: number;
-    }>;
+    }[];
   } {
     return {
       active_units: Math.round(activeUnits * 10) / 10,

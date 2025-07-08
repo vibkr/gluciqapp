@@ -1,22 +1,28 @@
 import { View, ViewProps, ViewStyle } from "react-native";
+import { useTheme } from "../../contexts/ThemeContext";
 
 export function Card({ children, style, ...props }: ViewProps) {
+  const { theme } = useTheme();
+  
   return (
     <View
       style={[
         {
-          backgroundColor: "#1c1c1c",
-          padding: 16,
-          borderRadius: 12,
+          backgroundColor: theme.colors.card,
+          padding: 24,
+          borderRadius: 20,
           marginVertical: 8,
-          shadowColor: "#000",
+          marginHorizontal: 6,
+          shadowColor: theme.colors.shadow,
           shadowOffset: {
             width: 0,
-            height: 2,
+            height: 4,
           },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-          elevation: 5,
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 6,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
         },
         style as ViewStyle,
       ]}

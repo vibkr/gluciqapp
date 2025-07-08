@@ -419,5 +419,8 @@ export const getThemesByBase = (baseTheme: string): EnhancedTheme[] => {
   return Object.values(themeRegistry).filter(theme => theme.id === baseTheme);
 };
 
+// Export available themes array
+export const availableThemes = getAllThemes();
+
 // Default theme
 export const defaultTheme = midnightDark;

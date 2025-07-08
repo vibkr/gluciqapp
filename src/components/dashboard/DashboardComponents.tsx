@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,13 +6,20 @@ import {
   StyleSheet, 
   Dimensions, 
   Animated,
-  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const { width } = Dimensions.get('window');
+
+
+// Type helper for LinearGradient colors
+const getGradientColors = (colors: string[]): readonly [string, string, ...string[]] => {
+  if (colors.length < 2) {
+    return [colors[0] || '#000000', colors[0] || '#000000'];
+  }
+  return colors as unknown as readonly [string, string, ...string[]];
+};
 
 // Floating animation component
 export const FloatingElement: React.FC<{
@@ -130,7 +137,7 @@ export const XPProgressBar: React.FC<{
             Level {level}
           </Text>
           <LinearGradient
-            colors={theme.gradients.accent as readonly [string, string, ...string[]]}
+            colors={getGradientColors(theme.gradients.accent)}
             style={styles.legendaryBadge}
           >
             <Text style={styles.legendaryText}>Legendary</Text>
@@ -145,7 +152,7 @@ export const XPProgressBar: React.FC<{
         <View style={[styles.progressBarBg, { backgroundColor: theme.colors.border }]}>
           <Animated.View style={[styles.progressBarContainer, { width: animatedWidth }]}>
             <LinearGradient
-              colors={theme.gradients.primary}
+              colors={getGradientColors(theme.gradients.primary)}
               style={styles.progressBar}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -199,7 +206,7 @@ export const QuestCard: React.FC<{
       <View style={styles.questContent}>
         <View style={styles.questHeader}>
           <LinearGradient
-            colors={completed ? ['#10B981', '#059669'] : theme.gradients.primary}
+            colors={completed ? ['#10B981', '#059669'] : getGradientColors(theme.gradients.primary)}
             style={styles.questIcon}
           >
             <Ionicons 
@@ -235,7 +242,7 @@ export const QuestCard: React.FC<{
             </View>
             <View style={[styles.questProgressBg, { backgroundColor: theme.colors.border }]}>
               <LinearGradient
-                colors={theme.gradients.secondary}
+                colors={getGradientColors(theme.gradients.secondary)}
                 style={[styles.questProgress, { width: `${progress}%` }]}
               />
             </View>
@@ -243,7 +250,7 @@ export const QuestCard: React.FC<{
         )}
         
         <LinearGradient
-          colors={theme.gradients.accent}
+          colors={getGradientColors(theme.gradients.accent)}
           style={styles.rewardGradient}
         >
           <Text style={styles.questReward}>
@@ -271,13 +278,13 @@ export const GlucoseHero: React.FC<{
   
   return (
     <LinearGradient
-      colors={theme.gradients.card}
+      colors={getGradientColors(theme.gradients.card)}
       style={[styles.glucoseHero, { borderColor: theme.colors.border }]}
     >
       <View style={styles.glucoseHeader}>
         <View style={styles.glucoseHeaderLeft}>
           <LinearGradient
-            colors={theme.gradients.primary}
+            colors={getGradientColors(theme.gradients.primary)}
             style={styles.glucoseIcon}
           >
             <Ionicons name="water" size={24} color="white" />
@@ -358,7 +365,7 @@ export const GlucoBalanceCard: React.FC<{
       <View style={styles.glucoBalanceHeader}>
         <View>
           <View style={styles.glucoBalanceTitle}>
-            <Ionicons name="brain" size={20} color={theme.colors.primary} />
+            <Ionicons name="bulb" size={20} color={theme.colors.primary} />
             <Text style={[styles.glucoBalanceTitleText, { color: theme.colors.text }]}>
               GlucoBalance™
             </Text>
@@ -371,7 +378,7 @@ export const GlucoBalanceCard: React.FC<{
         <FloatingElement delay={0.5}>
           <View style={styles.glucoBalanceScore}>
             <LinearGradient
-              colors={theme.gradients.secondary}
+              colors={getGradientColors(theme.gradients.secondary)}
               style={styles.scoreCircle}
             >
               <Text style={styles.scoreText}>{glucoBalance}</Text>
@@ -404,7 +411,7 @@ export const GlucoBalanceCard: React.FC<{
           </View>
           <TouchableOpacity onPress={onAddPress} activeOpacity={0.8}>
             <LinearGradient
-              colors={theme.gradients.accent}
+              colors={getGradientColors(theme.gradients.accent)}
               style={styles.addButton}
             >
               <Ionicons name="add" size={20} color="white" />
@@ -447,7 +454,7 @@ export const VictoryTrackCard: React.FC<{
         <FloatingElement delay={0.3}>
           <View style={styles.streakIcon}>
             <LinearGradient
-              colors={theme.gradients.accent}
+              colors={getGradientColors(theme.gradients.accent)}
               style={styles.streakCircle}
             >
               <Ionicons name="flame" size={32} color="white" />
@@ -477,7 +484,7 @@ export const VictoryTrackCard: React.FC<{
             </View>
             <View style={[styles.streakProgressBg, { backgroundColor: theme.colors.border }]}>
               <LinearGradient
-                colors={theme.gradients.primary}
+                colors={getGradientColors(theme.gradients.primary)}
                 style={[styles.streakProgressBar, { width: `${progressPercentage}%` }]}
               />
             </View>
@@ -494,10 +501,10 @@ export const VictoryTrackCard: React.FC<{
 
       <View style={styles.achievementBadges}>
         {[
-          { icon: 'target', name: 'Perfect Week', unlocked: true },
-          { icon: 'award', name: 'Diamond TIR', unlocked: true },
-          { icon: 'brain', name: 'Data Wizard', unlocked: true },
-          { icon: 'game-controller', name: 'Ninja', unlocked: false }
+          { icon: 'flag' as const, name: 'Perfect Week', unlocked: true },
+          { icon: 'medal' as const, name: 'Diamond TIR', unlocked: true },
+          { icon: 'analytics' as const, name: 'Data Wizard', unlocked: true },
+          { icon: 'game-controller' as const, name: 'Ninja', unlocked: false }
         ].map((badge, index) => (
           <View 
             key={index}
@@ -511,7 +518,7 @@ export const VictoryTrackCard: React.FC<{
             ]}
           >
             <Ionicons 
-              name={badge.icon as any} 
+              name={badge.icon} 
               size={20} 
               color={badge.unlocked ? '#FFD700' : theme.colors.textMuted} 
             />
@@ -647,13 +654,16 @@ const styles = StyleSheet.create({
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'center',
+    marginBottom: 8,
   },
   progressLabel: {
     fontSize: 12,
+    fontWeight: '600',
   },
   progressPercent: {
     fontSize: 12,
+    fontWeight: '600',
   },
   questProgressBg: {
     height: 8,
@@ -665,21 +675,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   rewardGradient: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 1,
-    paddingVertical: 1,
-    borderRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   questReward: {
+    color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
-    color: 'transparent',
   },
 
   // Glucose Hero Styles
   glucoseHero: {
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
     marginBottom: 16,
   },
@@ -687,7 +697,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   glucoseHeaderLeft: {
     flexDirection: 'row',
@@ -707,6 +717,7 @@ const styles = StyleSheet.create({
   },
   glucoseSubtitle: {
     fontSize: 14,
+    marginTop: 2,
   },
   statusBadge: {
     backgroundColor: 'rgba(16, 185, 129, 0.2)',
@@ -714,54 +725,53 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 16,
   },
   statusText: {
     color: '#10B981',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   glucoseMainContent: {
-    alignItems: 'center',
+    gap: 20,
   },
   glucoseValueContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
   },
   glucoseValue: {
-    fontSize: 64,
-    fontWeight: '900',
+    fontSize: 48,
+    fontWeight: 'bold',
   },
   glucoseUnit: {
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   trendIcon: {
-    position: 'absolute',
-    top: -8,
-    right: -32,
+    marginLeft: 8,
   },
   glucoseStats: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
+    justifyContent: 'space-between',
   },
   statItem: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   statLabel: {
     fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
   },
 
   // GlucoBalance Card Styles
   glucoBalanceCard: {
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     marginBottom: 16,
   },
@@ -781,60 +791,58 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   aiPoweredBadge: {
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
     marginTop: 4,
   },
   aiPoweredText: {
-    color: '#3B82F6',
-    fontSize: 12,
+    color: '#8B5CF6',
+    fontSize: 10,
     fontWeight: 'bold',
   },
   glucoBalanceScore: {
-    position: 'relative',
+    alignItems: 'center',
   },
   scoreCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   scoreText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
   },
   gradeBadge: {
     position: 'absolute',
     top: -8,
     right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
     backgroundColor: '#FFD700',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   gradeText: {
-    color: 'white',
-    fontSize: 12,
+    color: '#1E293B',
+    fontSize: 10,
     fontWeight: 'bold',
   },
   recommendationCard: {
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     borderWidth: 1,
   },
   recommendationContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
   foodEmoji: {
     fontSize: 32,
@@ -857,38 +865,42 @@ const styles = StyleSheet.create({
   },
   perfectTimingTag: {
     backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   perfectTimingText: {
     color: '#10B981',
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   lowGLTag: {
     backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   lowGLText: {
     color: '#3B82F6',
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   addButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // VictoryTrack Card Styles
   victoryTrackCard: {
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     marginBottom: 16,
   },
@@ -896,7 +908,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   victoryTrackTitle: {
     flexDirection: 'row',
@@ -908,21 +920,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   trophyEmoji: {
-    fontSize: 32,
+    fontSize: 24,
   },
   streakContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   streakIcon: {
-    position: 'relative',
+    alignItems: 'center',
   },
   streakCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -931,15 +943,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   streakNumber: {
-    color: 'white',
+    color: '#1E293B',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -949,24 +959,27 @@ const styles = StyleSheet.create({
   streakTitle: {
     fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   streakSubtitle: {
     fontSize: 14,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   streakProgress: {
-    marginTop: 8,
+    gap: 8,
   },
   streakProgressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'center',
   },
   streakProgressText: {
     fontSize: 12,
+    fontWeight: '600',
   },
   streakProgressPercent: {
     fontSize: 12,
+    fontWeight: '600',
   },
   streakProgressBg: {
     height: 8,
@@ -980,32 +993,30 @@ const styles = StyleSheet.create({
   nextBadgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
+    gap: 8,
     marginBottom: 16,
   },
   nextBadgeText: {
-    fontSize: 14,
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   achievementBadges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
   achievementBadge: {
-    flex: 1,
-    minWidth: '22%',
-    aspectRatio: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 80,
   },
   achievementBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginTop: 4,
+    fontSize: 10,
+    fontWeight: '600',
   },
 }); 

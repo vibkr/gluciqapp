@@ -9,7 +9,7 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { Card } from '@/src/components/ui';
 import { userStore, userActions } from '@/src/stores/userStore';
@@ -719,7 +719,7 @@ export default function SettingsScreen() {
           <View style={styles.themeContainer}>
             <Text style={styles.themeLabel}>Theme Base</Text>
             <View style={styles.themeGrid}>
-              {themeActions.getThemeBases().map((themeBase) => {
+              {(themeActions.getThemeBases() || []).map((themeBase) => {
                 const isSelected = themeStore.selectedThemeBase.get() === themeBase;
                 return (
                   <TouchableOpacity

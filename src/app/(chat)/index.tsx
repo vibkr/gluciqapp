@@ -7,16 +7,13 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { Card } from '@/src/components/ui';
 import { userStore } from '@/src/stores/userStore';
-import { foodStore, foodActions } from '@/src/stores/foodStore';
-import { insulinStore } from '@/src/stores/insulinStore';
+import { foodActions } from '@/src/stores/foodStore';
 import {
   FloatingElement,
   PulsingOrb,
@@ -27,15 +24,13 @@ import {
   VictoryTrackCard,
 } from '@/src/components/dashboard/DashboardComponents';
 
-const { width } = Dimensions.get('window');
-
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   
   // Mock data for viral dashboard (replace with real data later)
-  const [dashboardData, setDashboardData] = useState({
+  const dashboardData = {
     currentGlucose: 125,
     timeInRange: 89,
     avgGlucose: 135,
@@ -46,12 +41,10 @@ export default function DashboardScreen() {
     xp: 2340,
     xpToNext: 2500,
     a1cValue: 6.4,
-  });
+  };
 
   // Get current user profile
   const currentProfile = userStore.profile.get();
-  const recentAnalysis = foodStore.recentAnalysis.get();
-  const mealHistory = foodStore.mealHistory.get();
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -392,11 +385,10 @@ export default function DashboardScreen() {
 
       {/* Floating Action Button for Camera */}
       <TouchableOpacity
-        style={styles.floatingActionButton}
         onPress={() => handleQuickAction('scan_food')}
       >
         <LinearGradient
-          colors={[theme.colors.primary, theme.colors.secondary]}
+          colors={[theme.colors.primary, theme.colors.secondary] as readonly [string, string, ...string[]]}
           style={styles.floatingActionButton}
         >
           <Ionicons name="camera" size={28} color="white" />

@@ -25,6 +25,8 @@ export default function FoodCaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState('');
+  const [analysisProgress, setAnalysisProgress] = useState(0);
 
   const foodPipeline = new FoodAnalysisPipeline();
 
@@ -58,6 +60,8 @@ export default function FoodCaptureScreen() {
         console.log('Photo captured:', photo.uri);
         setIsCapturing(false);
         setIsAnalyzing(true);
+        setAnalysisStep('Preparing image...');
+        setAnalysisProgress(10);
         
         // Get current user
         const currentProfile = userStore.profile.get();
@@ -65,6 +69,16 @@ export default function FoodCaptureScreen() {
           Alert.alert('Error', 'User profile not found. Please complete onboarding first.');
           return;
         }
+
+        // Update progress
+        setAnalysisStep('Uploading image...');
+        setAnalysisProgress(25);
+        
+        // Small delay to show progress
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        setAnalysisStep('Analyzing food with AI...');
+        setAnalysisProgress(50);
 
         // Run complete food analysis pipeline
         const result = await foodPipeline.analyzeFoodImage(
@@ -77,17 +91,42 @@ export default function FoodCaptureScreen() {
             capture_location_lng: null
           }
         );
+        
+        setAnalysisStep('Calculating nutrition...');
+        setAnalysisProgress(85);
 
         if (result.success) {
           // Navigate to results page with analysis data
+          // The food-results screen expects analysisData as a FoodAnalysisResult JSON string
+          // We need to format the raw_response from the pipeline result to match the expected format
+          const rawAnalysis = result.analysisResult.raw_response;
+          
+          // Convert raw Gemini response to FoodAnalysisResult format
+          const formattedAnalysisData = {
+            source: 'vision',
+            confidence: rawAnalysis.analysis.confidence,
+            processingTime: rawAnalysis.analysis.processing_time,
+            visionAnalysis: rawAnalysis,
+            foods: rawAnalysis.foods.map((food: any) => ({
+              ...food,
+              allergens: [],
+              isDiabetesFriendly: food.nutrition.sugar < 5 && (food.nutrition.carbohydrates < 15 || food.nutrition.fiber > 3),
+            })),
+            recommendations: {
+              ...rawAnalysis.recommendations,
+              total_calories: rawAnalysis.foods.reduce((sum: number, food: any) => sum + food.nutrition.calories, 0),
+              diabetes_notes: rawAnalysis.foods.some((food: any) => food.glycemic_info.estimated_bg_impact === 'high') 
+                ? ['This meal contains high glycemic impact foods - monitor blood sugar closely']
+                : []
+            }
+          };
+          
           router.push({
             pathname: '/analysis/food-results',
             params: {
-              analysisId: result.analysisResult.id,
-              imageId: result.imageRecord.id,
-              totalCarbs: result.insulinCalculation.carb_dose.units * result.insulinCalculation.carb_dose.ratio_used,
-              recommendedDose: result.insulinCalculation.total_recommendation.units,
-              confidence: result.insulinCalculation.total_recommendation.confidence_level
+              analysisData: JSON.stringify(formattedAnalysisData),
+              imageUrl: result.imageRecord.storage_url,
+              userId: currentProfile.id
             }
           });
         } else {
@@ -107,6 +146,8 @@ export default function FoodCaptureScreen() {
     } finally {
       setIsCapturing(false);
       setIsAnalyzing(false);
+      setAnalysisStep('');
+      setAnalysisProgress(0);
     }
   };
 
@@ -177,9 +218,24 @@ export default function FoodCaptureScreen() {
             </View>
             
             {isAnalyzing && (
-              <Text style={styles.analysisText}>
-                🔍 Analyzing food with AI...
-              </Text>
+              <View style={styles.analysisContainer}>
+                <Text style={styles.analysisText}>
+                  {analysisStep || '🔍 Analyzing food with AI...'}
+                </Text>
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <View 
+                      style={[
+                        styles.progressFill, 
+                        { width: `${analysisProgress}%` }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {analysisProgress}%
+                  </Text>
+                </View>
+              </View>
             )}
           </View>
         </View>
@@ -309,5 +365,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
+  },
+  analysisContainer: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  progressContainer: {
+    alignItems: 'center',
+    marginTop: 15,
+    width: 200,
+  },
+  progressBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 2,
+  },
+  progressText: {
+    color: 'white',
+    fontSize: 12,
+    marginTop: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
 });

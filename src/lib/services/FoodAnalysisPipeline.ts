@@ -28,12 +28,14 @@ export class FoodAnalysisPipeline {
     userId: string,
     metadata: any = {}
   ): Promise<FoodAnalysisPipelineResult> {
+    let imageRecord: any = null;
+    
     try {
       console.log('Starting food analysis pipeline for user:', userId);
       
       // Step 1: Upload image to Supabase
       console.log('Step 1: Uploading image to Supabase...');
-      const { imageRecord, uploadResult } = await this.imageService.uploadFoodImage(
+      const uploadResult = await this.imageService.uploadFoodImage(
         imageUri,
         userId,
         {
@@ -42,6 +44,7 @@ export class FoodAnalysisPipeline {
           ...metadata
         }
       );
+      imageRecord = uploadResult.imageRecord;
 
       // Step 2: Analyze image with Gemini Vision
       console.log('Step 2: Analyzing image with Gemini Vision...');
@@ -68,8 +71,7 @@ export class FoodAnalysisPipeline {
 
       // Step 5: Update image processing status
       await this.imageService.updateProcessingStatus(imageRecord.id, {
-        is_processed: true,
-        processing_completed_at: new Date().toISOString()
+        processing_status: 'completed'
       });
 
       console.log('Food analysis pipeline completed successfully');
@@ -83,8 +85,21 @@ export class FoodAnalysisPipeline {
 
     } catch (error) {
       console.error('Food analysis pipeline failed:', error);
+      
+      // Try to update image status to failed if we have an image record
+      if (imageRecord?.id) {
+        try {
+          await this.imageService.updateProcessingStatus(imageRecord.id, {
+            processing_status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Unknown error'
+          });
+        } catch (updateError) {
+          console.error('Failed to update image status to failed:', updateError);
+        }
+      }
+      
       return {
-        imageRecord: null,
+        imageRecord: imageRecord || null,
         analysisResult: null,
         insulinCalculation: null,
         success: false,
@@ -139,20 +154,19 @@ export class FoodAnalysisPipeline {
       analysis_result_id: analysisResultId,
       detected_name: food.name,
       category: food.category,
-      portion_amount: food.portion.amount,
+      confidence_score: (food.nutrition?.confidence || 90) / 100, // Overall confidence for the food detection
+      estimated_portion: food.portion.amount,
       portion_unit: food.portion.unit,
-      confidence_score: food.portion.confidence / 100,
-      calories: food.nutrition.calories,
-      carbs_g: food.nutrition.carbohydrates,
-      protein_g: food.nutrition.protein,
-      fat_g: food.nutrition.fat,
-      fiber_g: food.nutrition.fiber,
-      sugar_g: food.nutrition.sugar,
-      glycemic_index: food.glycemic_info.glycemic_index,
-      glycemic_load: food.glycemic_info.glycemic_load,
-      estimated_bg_impact: food.glycemic_info.estimated_bg_impact,
-      preparation_notes: food.preparation_notes,
-      uncertainty_flags: food.uncertainty_flags || []
+      portion_confidence: food.portion.confidence / 100,
+      estimated_calories: food.nutrition.calories,
+      estimated_carbs_g: food.nutrition.carbohydrates,
+      estimated_protein_g: food.nutrition.protein,
+      estimated_fat_g: food.nutrition.fat,
+      // Note: fiber and sugar are not in the analyzed_foods schema
+      // glycemic_index and glycemic_load are not in the analyzed_foods schema
+      // estimated_bg_impact is not in the analyzed_foods schema
+      // preparation_notes is not in the analyzed_foods schema
+      // uncertainty_flags is not in the analyzed_foods schema
     };
 
     const { error } = await supabaseClientManager.foodAnalysis

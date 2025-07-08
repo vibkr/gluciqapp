@@ -1,377 +1,370 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Pressable, Alert } from 'react-native';
-import { Text } from '@/src/components/Text';
-import { IconSymbol } from '@/src/components/IconSymbol';
-import { useUser } from '@clerk/clerk-expo';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { testGeminiAPI, testGeminiVisionAPI } from '@/src/lib/ai/test-api';
-import { testSupabaseConnection, testSupabaseAuth, testLoadTestUser } from '@/src/lib/database/test-supabase';
-import { useUserStore, userActions } from '@/src/stores/userStore';
-import { use$ } from '@legendapp/state/react';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/src/contexts/ThemeContext';
+import { Card } from '@/src/components/ui';
+import { userStore } from '@/src/stores/userStore';
+import { foodStore, foodActions } from '@/src/stores/foodStore';
+import { insulinStore } from '@/src/stores/insulinStore';
 
-export default function Dashboard() {
-  const { user } = useUser();
+export default function DashboardScreen() {
+  const { theme } = useTheme();
   const router = useRouter();
-  const { store, computed } = useUserStore();
+  const [loading, setLoading] = useState(true);
   
-  // Reactive state from user store
-  const profile = use$(store.profile);
-  const isLoading = use$(store.isLoading);
-  const onboardingCompleted = use$(store.onboardingCompleted);
-  const profileCompletionPercentage = use$(store.profileCompletionPercentage);
-  const syncError = use$(store.syncError);
+  // Get current user profile
+  const currentProfile = userStore.profile.get();
+  const recentAnalysis = foodStore.recentAnalysis.get();
+  const mealHistory = foodStore.mealHistory.get();
 
-  // Initialize user data when component mounts or user changes
   useEffect(() => {
-    if (user) {
-      userActions.initializeUser(user);
-    }
-  }, [user]);
+    const loadDashboardData = async () => {
+      if (!currentProfile?.id) {
+        setLoading(false);
+        return;
+      }
 
-  // Redirect to onboarding if profile is incomplete
-  useEffect(() => {
-    if (!isLoading && profile && computed.needsOnboarding) {
-      console.log('Redirecting to onboarding - profile incomplete');
-      router.replace('/onboarding/welcome');
-    }
-  }, [isLoading, profile, computed.needsOnboarding, router]);
+      try {
+        // Load recent food analysis and meal history
+        await Promise.all([
+          foodActions.refreshRecentAnalysis(currentProfile.id),
+          foodActions.refreshMealHistory(currentProfile.id),
+        ]);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Show loading state while initializing user data
-  if (isLoading || !profile) {
+    loadDashboardData();
+  }, [currentProfile?.id]);
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'scan_food':
+        router.push('/camera/food-capture');
+        break;
+      case 'scan_barcode':
+        router.push('/camera/barcode-scanner');
+        break;
+      case 'log_insulin':
+        router.push('/insulin');
+        break;
+      case 'view_foods':
+        router.push('/food');
+        break;
+      default:
+        Alert.alert('Coming Soon', 'This feature is being developed.');
+    }
+  };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    scrollContainer: {
+      flex: 1,
+      padding: 16,
+    },
+    welcomeCard: {
+      marginBottom: 20,
+      padding: 20,
+    },
+    welcomeText: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    welcomeSubtext: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+    },
+    quickActionsTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 12,
+    },
+    quickActionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      marginBottom: 24,
+    },
+    quickActionButton: {
+      flex: 1,
+      minWidth: '45%',
+      backgroundColor: theme.colors.surface,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    quickActionIcon: {
+      marginBottom: 8,
+    },
+    quickActionText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: theme.colors.text,
+      textAlign: 'center',
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 12,
+    },
+    recentItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      backgroundColor: theme.colors.surface,
+      borderRadius: 8,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    recentItemIcon: {
+      marginRight: 12,
+    },
+    recentItemContent: {
+      flex: 1,
+    },
+    recentItemTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    recentItemSubtitle: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+    },
+    recentItemTime: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+    },
+    emptyState: {
+      alignItems: 'center',
+      padding: 20,
+    },
+    emptyStateIcon: {
+      marginBottom: 12,
+    },
+    emptyStateText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    emptyStateButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    emptyStateButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });
+
+  if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Setting up your profile...</Text>
-          {syncError && (
-            <Text style={styles.errorText}>
-              Error: {syncError}
-            </Text>
-          )}
-        </View>
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={{ color: theme.colors.text, marginTop: 16 }}>
+          Loading dashboard...
+        </Text>
+      </View>
     );
   }
-
-  // Show onboarding prompt if profile is incomplete but not yet redirected
-  if (computed.needsOnboarding) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.onboardingPromptContainer}>
-          <Text style={styles.welcomeText}>
-            Welcome to GluciQ!
-          </Text>
-          <Text style={styles.subText}>
-            Let's set up your profile to get started
-          </Text>
-          <Pressable 
-            style={styles.onboardingButton}
-            onPress={() => router.push('/onboarding/welcome')}
-          >
-            <Text style={styles.onboardingButtonText}>
-              Complete Setup
-            </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const handleFoodScanning = () => {
-    router.push('/camera/food-capture');
-  };
-
-  const handleBarcodeScanning = () => {
-    router.push('/camera/barcode-scanner');
-  };
-
-  const handleProfile = () => {
-    router.push('/settings/profile');
-  };
-
-  const handleTestAPI = async () => {
-    try {
-      Alert.alert('Testing Connections...', 'Please wait while we test all API connections.');
-      
-      // Test Google Gemini APIs
-      const geminiWorks = await testGeminiAPI();
-      const visionWorks = await testGeminiVisionAPI();
-      
-      // Test Supabase
-      const supabaseWorks = await testSupabaseConnection();
-      const supabaseAuthWorks = await testSupabaseAuth();
-      const testUserWorks = await testLoadTestUser();
-      
-      const results = [
-        `Gemini API: ${geminiWorks ? '✅' : '❌'}`,
-        `Vision API: ${visionWorks ? '✅' : '❌'}`,
-        `Supabase DB: ${supabaseWorks ? '✅' : '❌'}`,
-        `Supabase Auth: ${supabaseAuthWorks ? '✅' : '❌'}`,
-        `Test User: ${testUserWorks ? '✅' : '❌'}`
-      ].join('\n');
-      
-      const allWorking = geminiWorks && visionWorks && supabaseWorks && supabaseAuthWorks && testUserWorks;
-      
-      Alert.alert(
-        allWorking ? '✅ All Tests Passed!' : '⚠️ Some Tests Failed',
-        results
-      );
-      
-    } catch (error) {
-      Alert.alert('❌ Test Error', 'Error running tests: ' + error);
-    }
-  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.welcomeText}>
-                Welcome back, {profile.first_name || profile.display_name || 'User'}!
-              </Text>
-              <Text style={styles.subText}>
-                What would you like to analyze today?
-              </Text>
-            </View>
-            <Pressable 
-              style={styles.profileButton}
-              onPress={handleProfile}
-            >
-              <IconSymbol 
-                name="person.circle.fill" 
-                size={32} 
-                color="#007AFF" 
-              />
-              {profileCompletionPercentage < 100 && (
-                <View style={styles.completionBadge}>
-                  <Text style={styles.completionText}>
-                    {profileCompletionPercentage}%
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-          
-          {profileCompletionPercentage < 100 && (
-            <View style={styles.profileCompletionBar}>
-              <Text style={styles.profileCompletionText}>
-                Profile {profileCompletionPercentage}% complete
-              </Text>
-              <View style={styles.progressBarContainer}>
-                <View 
-                  style={[
-                    styles.progressBar, 
-                    { width: `${profileCompletionPercentage}%` }
-                  ]} 
-                />
-              </View>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <Pressable 
-            style={styles.scanButton}
-            onPress={handleFoodScanning}
-          >
-            <View style={styles.buttonContent}>
-              <IconSymbol 
-                name="camera.fill" 
-                size={40} 
-                color="#007AFF" 
-              />
-              <Text style={styles.buttonTitle}>Food Scanning</Text>
-              <Text style={styles.buttonSubtitle}>
-                Take a photo of your food to get nutrition info and insulin recommendations
-              </Text>
-            </View>
-          </Pressable>
-
-          <Pressable 
-            style={styles.scanButton}
-            onPress={handleBarcodeScanning}
-          >
-            <View style={styles.buttonContent}>
-              <IconSymbol 
-                name="barcode.viewfinder" 
-                size={40} 
-                color="#007AFF" 
-              />
-              <Text style={styles.buttonTitle}>Barcode Scanning</Text>
-              <Text style={styles.buttonSubtitle}>
-                Scan product barcodes to get detailed nutrition information
-              </Text>
-            </View>
-          </Pressable>
-
-          {/* Temporary API Test Button */}
-          <Pressable 
-            style={[styles.scanButton, { backgroundColor: '#2c2c2c' }]}
-            onPress={handleTestAPI}
-          >
-            <View style={styles.buttonContent}>
-              <IconSymbol 
-                name="gear" 
-                size={30} 
-                color="#FFA500" 
-              />
-              <Text style={styles.buttonTitle}>Test All Connections</Text>
-              <Text style={styles.buttonSubtitle}>
-                Test Google Gemini APIs, Supabase database, and user data
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Your diabetes management companion
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Welcome Card */}
+        <Card style={styles.welcomeCard}>
+          <Text style={styles.welcomeText}>
+            Welcome back{currentProfile?.first_name ? `, ${currentProfile.first_name}` : ''}!
           </Text>
+          <Text style={styles.welcomeSubtext}>
+            Track your nutrition and manage your diabetes with ease.
+          </Text>
+        </Card>
+
+        {/* Quick Actions */}
+        <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+        <View style={styles.quickActionsGrid}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => handleQuickAction('scan_food')}
+          >
+            <Ionicons
+              name="camera"
+              size={32}
+              color={theme.colors.primary}
+              style={styles.quickActionIcon}
+            />
+            <Text style={styles.quickActionText}>Scan Food</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => handleQuickAction('scan_barcode')}
+          >
+            <Ionicons
+              name="barcode"
+              size={32}
+              color={theme.colors.primary}
+              style={styles.quickActionIcon}
+            />
+            <Text style={styles.quickActionText}>Scan Barcode</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => handleQuickAction('log_insulin')}
+          >
+            <Ionicons
+              name="medical"
+              size={32}
+              color={theme.colors.primary}
+              style={styles.quickActionIcon}
+            />
+            <Text style={styles.quickActionText}>Log Insulin</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => handleQuickAction('view_foods')}
+          >
+            <Ionicons
+              name="restaurant"
+              size={32}
+              color={theme.colors.primary}
+              style={styles.quickActionIcon}
+            />
+            <Text style={styles.quickActionText}>Food History</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-    </SafeAreaView>
+
+        {/* Recent Food Analysis */}
+        <Text style={styles.sectionTitle}>Recent Food Analysis</Text>
+        {recentAnalysis.length > 0 ? (
+          recentAnalysis.slice(0, 3).map((analysis, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.recentItem}
+              onPress={() => router.push('/food')}
+            >
+              <Ionicons
+                name="restaurant"
+                size={24}
+                color={theme.colors.primary}
+                style={styles.recentItemIcon}
+              />
+              <View style={styles.recentItemContent}>
+                <Text style={styles.recentItemTitle}>
+                  Food Analysis
+                </Text>
+                                 <Text style={styles.recentItemSubtitle}>
+                   {analysis.confidence_score}% confidence
+                 </Text>
+              </View>
+              <Text style={styles.recentItemTime}>
+                {new Date(analysis.created_at).toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Card style={styles.emptyState}>
+            <Ionicons
+              name="restaurant-outline"
+              size={48}
+              color={theme.colors.textSecondary}
+              style={styles.emptyStateIcon}
+            />
+            <Text style={styles.emptyStateText}>
+              No food analysis yet.{'\n'}Start by scanning your first meal!
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => handleQuickAction('scan_food')}
+            >
+              <Text style={styles.emptyStateButtonText}>Scan Food</Text>
+            </TouchableOpacity>
+          </Card>
+        )}
+
+        {/* Recent Meals */}
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Recent Meals</Text>
+        {mealHistory.length > 0 ? (
+          mealHistory.slice(0, 3).map((meal, index) => (
+            <TouchableOpacity
+              key={meal.id || index}
+              style={styles.recentItem}
+              onPress={() => router.push('/food')}
+            >
+              <Ionicons
+                name="nutrition"
+                size={24}
+                color={theme.colors.primary}
+                style={styles.recentItemIcon}
+              />
+              <View style={styles.recentItemContent}>
+                <Text style={styles.recentItemTitle}>
+                  {meal.meal_type || 'Meal'}
+                </Text>
+                                 <Text style={styles.recentItemSubtitle}>
+                   {meal.total_calories || 0} calories
+                 </Text>
+              </View>
+              <Text style={styles.recentItemTime}>
+                {new Date(meal.logged_at).toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Card style={styles.emptyState}>
+            <Ionicons
+              name="nutrition-outline"
+              size={48}
+              color={theme.colors.textSecondary}
+              style={styles.emptyStateIcon}
+            />
+            <Text style={styles.emptyStateText}>
+              No meals logged yet.{'\n'}Start tracking your nutrition!
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => handleQuickAction('scan_food')}
+            >
+              <Text style={styles.emptyStateButtonText}>Log First Meal</Text>
+            </TouchableOpacity>
+          </Card>
+        )}
+      </ScrollView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'space-between',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    marginBottom: 10,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#FF6B6B',
-    textAlign: 'center',
-  },
-  onboardingPromptContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  onboardingButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 32,
-  },
-  onboardingButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  profileButton: {
-    position: 'relative',
-  },
-  completionBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 24,
-  },
-  completionText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  profileCompletionBar: {
-    marginTop: 8,
-  },
-  profileCompletionText: {
-    fontSize: 14,
-    color: '#FFA500',
-    marginBottom: 8,
-  },
-  progressBarContainer: {
-    height: 4,
-    backgroundColor: '#333333',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#FFA500',
-    borderRadius: 2,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  subText: {
-    fontSize: 16,
-    color: '#999999',
-  },
-  buttonContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 20,
-  },
-  scanButton: {
-    backgroundColor: '#1c1c1c',
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#333333',
-  },
-  buttonContent: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  buttonTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  buttonSubtitle: {
-    fontSize: 14,
-    color: '#999999',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#666666',
-    fontStyle: 'italic',
-  },
-});

@@ -1,8 +1,9 @@
 import { ClerkLoaded, ClerkProvider } from "@clerk/clerk-expo";
-import { DarkTheme, ThemeProvider } from "@react-navigation/native";
+import { DarkTheme, ThemeProvider as NavigationThemeProvider } from "@react-navigation/native";
 import { Slot } from "expo-router";
 import { tokenCache } from "@/src/utils/cache";
 import { StatusBar } from "react-native";
+import { ThemeProvider } from "@/src/contexts/ThemeContext";
 
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
@@ -17,9 +18,11 @@ export default function RootLayout() {
       tokenCache={tokenCache}
     >
       <ClerkLoaded>
-        <ThemeProvider value={DarkTheme}>
-          <Slot />
-          <StatusBar barStyle="light-content" backgroundColor={"black"} />
+        <ThemeProvider>
+          <NavigationThemeProvider value={DarkTheme}>
+            <Slot />
+            <StatusBar barStyle="light-content" backgroundColor={"black"} />
+          </NavigationThemeProvider>
         </ThemeProvider>
       </ClerkLoaded>
     </ClerkProvider>

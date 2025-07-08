@@ -10,6 +10,8 @@ import { getCalculationServiceClient, getLoggingServiceClient } from '../api/ser
 import { foodService } from './FoodService';
 import { InsulinCalculator } from '../insulin/InsulinCalculator';
 import { InsulinCalculationInput, InsulinCalculationResult } from '../../types/insulin';
+import { userStore } from '../../stores/userStore';
+import { insulinStore } from '../../stores/insulinStore';
 
 /**
  * Enhanced Insulin Service - Integrates with food history and provides comprehensive insulin management
@@ -74,7 +76,7 @@ export class InsulinService {
       // Update the result with actual IOB data if available
       if (iobResponse.success && iobResponse.data) {
         baseResult.insulin_on_board.recent_doses = iobResponse.data.recent_doses.map(dose => ({
-          time: dose.timestamp,
+          time: typeof dose.timestamp === 'string' ? dose.timestamp : dose.timestamp.toISOString(),
           units: dose.user_final_dose,
           remaining_activity: 0.5 // simplified
         }));
@@ -145,7 +147,59 @@ export class InsulinService {
    * Get user's insulin profile
    */
   async getInsulinProfile(userId: string): Promise<ApiResponse<InsulinProfile>> {
-    return await this.calculationClient.get<InsulinProfile>(`/formula_service/user_formula_parameters/${userId}`);
+    try {
+      // Get user's diabetes settings from local store
+      const currentProfile = userStore.profile.get();
+      const diabetesSettings = userStore.diabetesSettings.get();
+      
+      if (!currentProfile || !diabetesSettings) {
+        throw new Error('User profile or diabetes settings not found');
+      }
+
+      // Convert diabetes settings to insulin profile format
+      const insulinProfile: InsulinProfile = {
+        id: `profile_${userId}`,
+        user_id: userId,
+        carb_ratios: diabetesSettings.carb_ratios.map((ratio: any) => ({
+          time_start: ratio.time_start,
+          time_end: ratio.time_end,
+          ratio: ratio.ratio
+        })),
+        sensitivity_factor: diabetesSettings.correction_factors.map((factor: any) => ({
+          time_start: factor.time_start,
+          time_end: factor.time_end,
+          factor: factor.factor
+        })),
+        action_profile: {
+          onset: diabetesSettings.insulin_onset_minutes,
+          peak: 90, // Default peak time
+          duration: diabetesSettings.insulin_duration_hours * 60
+        },
+        safety_limits: {
+          max_single_dose: diabetesSettings.max_bolus_units,
+          max_daily_dose: diabetesSettings.max_bolus_units * 6, // Conservative estimate
+          min_carbs_for_dose: 5
+        },
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      return {
+        data: insulinProfile,
+        error: null,
+        success: true,
+        timestamp: new Date()
+      };
+
+    } catch (error) {
+      console.error('Error getting insulin profile:', error);
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Failed to get insulin profile',
+        success: false,
+        timestamp: new Date()
+      };
+    }
   }
 
   /**
@@ -217,7 +271,7 @@ export class InsulinService {
 
           breakdown.push({
             dose_id: dose.id,
-            time: dose.timestamp,
+            time: typeof dose.timestamp === 'string' ? dose.timestamp : dose.timestamp.toISOString(),
             original_units: dose.user_final_dose,
             remaining_units: remainingUnits,
             activity_percentage: activityPercentage
@@ -252,17 +306,35 @@ export class InsulinService {
    */
   async getRecentDoses(userId: string, hoursBack: number = 6): Promise<ApiResponse<InsulinDose[]>> {
     try {
+      // Get doses from local store (legacy format)
+      const allDoses = insulinStore.doses.get();
+      
       const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
       
-      const response = await this.loggingClient.get<InsulinDose[]>('/logging_service/insulin_doses', {
-        filters: { 
-          user_id: userId,
-          timestamp: { gte: cutoffTime.toISOString() }
-        },
-        select: '*'
-      });
+      // Filter recent doses and convert to API format
+      const recentDoses = allDoses
+        .filter(dose => 
+          dose.user_id === userId && 
+          new Date(dose.timestamp) > cutoffTime
+        )
+        .map(dose => ({
+          id: dose.id,
+          user_id: dose.user_id,
+          dose_type: 'meal' as const,
+          calculated_dose: dose.calculated_dose,
+          user_final_dose: dose.user_final_dose,
+          carbohydrates: dose.carbohydrates,
+          glucose_reading: dose.glucose_reading,
+          notes: dose.notes,
+          timestamp: new Date(dose.timestamp)
+        }));
 
-      return response;
+      return {
+        data: recentDoses,
+        error: null,
+        success: true,
+        timestamp: new Date()
+      };
     } catch (error) {
       console.error('Error getting recent doses:', error);
       return {
@@ -345,15 +417,15 @@ export class InsulinService {
       }
 
       // Analyze patterns (simplified for now)
-      context.patterns = {
-        averageCarbs: context.recentMeals.reduce(
-          (sum: number, meal: MealEntry) => sum + meal.total_nutrition.carbohydrates, 0
-        ) / Math.max(context.recentMeals.length, 1),
-        
-        averageDose: context.recentInsulin.reduce(
-          (sum: number, dose: InsulinDose) => sum + dose.user_final_dose, 0
-        ) / Math.max(context.recentInsulin.length, 1)
-      };
+              context.patterns = {
+          averageCarbs: context.recentMeals.reduce(
+            (sum: number, meal: MealEntry) => sum + meal.total_carbs_g, 0
+          ) / Math.max(context.recentMeals.length, 1),
+          
+          averageDose: context.recentInsulin.reduce(
+            (sum: number, dose: InsulinDose) => sum + dose.user_final_dose, 0
+          ) / Math.max(context.recentInsulin.length, 1)
+        };
 
     } catch (error) {
       console.error('Error getting calculation context:', error);

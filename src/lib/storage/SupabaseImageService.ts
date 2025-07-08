@@ -223,10 +223,8 @@ class SupabaseImageService {
   async updateProcessingStatus(
     imageId: string,
     status: {
-      is_processed?: boolean;
-      processing_started_at?: string;
-      processing_completed_at?: string;
-      processing_error?: string;
+      processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
+      error_message?: string;
     }
   ): Promise<void> {
     try {

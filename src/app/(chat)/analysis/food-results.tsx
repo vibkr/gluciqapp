@@ -80,12 +80,12 @@ export default function FoodResultsScreen() {
       const totalCarbs = analysis.foods.reduce((sum, food) => sum + food.nutrition.carbohydrates, 0);
       
       if (totalCarbs > 0) {
-        // Calculate insulin dose using the insulin service
-        const insulinResponse = await insulinService.calculateInsulinDose({
-          userId: userId,
-          carbohydrates: totalCarbs,
-          mealType: 'snack'
-        });
+              // Calculate insulin dose using the insulin service
+      const insulinResponse = await insulinService.calculateInsulinDose({
+        userId: userId,
+        carbohydrates: totalCarbs,
+        mealType: 'afternoon_snack'
+      });
         
         if (insulinResponse.success && insulinResponse.data) {
           setInsulinCalculation(insulinResponse.data);
@@ -116,7 +116,7 @@ export default function FoodResultsScreen() {
       // Create a meal entry from the analysis
       const mealResponse = await foodService.createMealFromAnalysis(
         analysisResponse.data.id,
-        'afternoon_snack', // Default to afternoon snack, user can change later
+        'snack', // Default to snack, user can change later
         userId
       );
       
@@ -159,7 +159,7 @@ export default function FoodResultsScreen() {
       const insulinResponse = await insulinService.calculateInsulinDose({
         userId: userId,
         carbohydrates: totalCarbs,
-        mealType: 'snack'
+        mealType: 'afternoon_snack'
       });
       
       if (insulinResponse.success && insulinResponse.data) {

@@ -15,9 +15,11 @@ import { Card } from '@/src/components/ui';
 import { userStore, userActions } from '@/src/stores/userStore';
 import { useAuth } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
+import { useThemeStore } from '@/src/stores/themeStore';
 
 export default function SettingsScreen() {
   const { theme } = useTheme();
+  const { store: themeStore, actions: themeActions } = useThemeStore();
   const { signOut } = useAuth();
   const router = useRouter();
   
@@ -177,6 +179,34 @@ export default function SettingsScreen() {
     );
   };
 
+  const formatThemeName = (themeBase: string) => {
+    const names = {
+      midnight: 'Midnight Pro',
+      aurora: 'Aurora Dreams',
+      sunset: 'Sunset Blaze',
+      ocean: 'Ocean Depths',
+      neon: 'Neon Cyber',
+      forest: 'Forest Sage',
+      rose: 'Rose Gold',
+      cosmic: 'Cosmic Void',
+    };
+    return names[themeBase as keyof typeof names] || themeBase;
+  };
+
+  const getThemePreviewColor = (themeBase: string) => {
+    const colors = {
+      midnight: '#6366F1',
+      aurora: '#10B981',
+      sunset: '#F97316',
+      ocean: '#3B82F6',
+      neon: '#8B5CF6',
+      forest: '#22C55E',
+      rose: '#EC4899',
+      cosmic: '#6366F1',
+    };
+    return colors[themeBase as keyof typeof colors] || '#6366F1';
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -287,6 +317,67 @@ export default function SettingsScreen() {
       color: '#FFFFFF',
       fontSize: 16,
       fontWeight: '600',
+    },
+    // Theme styles
+    themeContainer: {
+      marginBottom: 20,
+    },
+    themeLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 12,
+    },
+    themeGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    themeOption: {
+      flex: 1,
+      minWidth: '30%',
+      borderRadius: 12,
+      borderWidth: 2,
+      padding: 12,
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+    },
+    themeOptionSelected: {
+      backgroundColor: theme.colors.background,
+    },
+    themePreview: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      marginBottom: 8,
+    },
+    themeOptionText: {
+      fontSize: 12,
+      fontWeight: '500',
+      textAlign: 'center',
+    },
+    themeToggleContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    themeToggleLabel: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.colors.text,
+    },
+    themeToggle: {
+      width: 50,
+      height: 30,
+      borderRadius: 15,
+      justifyContent: 'center',
+      paddingHorizontal: 2,
+    },
+    themeToggleThumb: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
     },
   });
 
@@ -616,6 +707,63 @@ export default function SettingsScreen() {
               onValueChange={(value) => setPreferencesData({...preferencesData, meal_reminders: value})}
               disabled={editingSection !== 'preferences'}
             />
+          </View>
+        </Card>
+
+        {/* Theme Selection Section */}
+        <Card style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Theme & Appearance</Text>
+          </View>
+
+          <View style={styles.themeContainer}>
+            <Text style={styles.themeLabel}>Theme Base</Text>
+            <View style={styles.themeGrid}>
+              {themeActions.getThemeBases().map((themeBase) => {
+                const isSelected = themeStore.selectedThemeBase.get() === themeBase;
+                return (
+                  <TouchableOpacity
+                    key={themeBase}
+                    style={[
+                      styles.themeOption,
+                      isSelected && styles.themeOptionSelected,
+                      { borderColor: isSelected ? theme.colors.primary : theme.colors.border }
+                    ]}
+                    onPress={() => themeActions.setThemeBase(themeBase)}
+                  >
+                    <View style={[
+                      styles.themePreview,
+                      { backgroundColor: getThemePreviewColor(themeBase) }
+                    ]} />
+                    <Text style={[
+                      styles.themeOptionText,
+                      { color: isSelected ? theme.colors.primary : theme.colors.text }
+                    ]}>
+                      {formatThemeName(themeBase)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.themeToggleContainer}>
+            <Text style={styles.themeToggleLabel}>Dark Mode</Text>
+            <TouchableOpacity
+              style={[
+                styles.themeToggle,
+                { backgroundColor: themeStore.isDarkMode.get() ? theme.colors.primary : theme.colors.border }
+              ]}
+              onPress={() => themeActions.toggleDarkMode()}
+            >
+              <View style={[
+                styles.themeToggleThumb,
+                { 
+                  backgroundColor: 'white',
+                  transform: [{ translateX: themeStore.isDarkMode.get() ? 20 : 0 }]
+                }
+              ]} />
+            </TouchableOpacity>
           </View>
         </Card>
 

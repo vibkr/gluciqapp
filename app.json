@@ -1,16 +1,15 @@
 {
   "expo": {
-    "name": "modern-chat-app",
-    "slug": "modern-chat-app",
+    "name": "GlucIQ",
+    "slug": "gluciq",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
-    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.betoatexpo.modern-chat-app",
+      "bundleIdentifier": "com.gluciq.app",
       "associatedDomains": [
         "applinks:quiet-bulldog-8.clerk.accounts.dev",
         "webcredentials:quiet-bulldog-8.clerk.accounts.dev"
@@ -21,7 +20,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.betoatexpo.modernchatapp"
+      "package": "com.gluciq.app"
     },
     "web": {
       "bundler": "metro",
